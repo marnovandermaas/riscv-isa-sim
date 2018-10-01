@@ -9,6 +9,9 @@
 #include <map>
 #include <cstdint>
 
+typedef size_t slot_id_t;
+typedef uint64_t enclave_id_t;
+
 //Linear-feedback shift register
 class lfsr_t
 {
@@ -20,9 +23,12 @@ class lfsr_t
   uint32_t reg;
 };
 
+//Base cache simulator class
 class cache_sim_t
 {
  public:
+  //Caches have "sets" amount of sets. Each set consists of "ways" amount of
+  //cache blocks. And each block has "linesz" amount of Bytes
   cache_sim_t(size_t sets, size_t ways, size_t linesz, const char* name);
   cache_sim_t(const cache_sim_t& rhs);
   virtual ~cache_sim_t();
@@ -63,7 +69,30 @@ class cache_sim_t
   void init();
 };
 
-//As far as I can tell, just a faster implementatino of cache, when ways >4 and sets == 1
+class remapping_table_t
+{
+  public:
+    remapping_table_t(size_t sets);
+};
+
+//Wrapper class for LLC that is partitioned per enclave.
+class partitioned_cache_sim_t : public cache_sim_t
+{
+//Just use the static construct function from the cache_sim_t
+//Partitioned cache has an owner identifier per set.
+  public:
+    partitioned_cache_sim_t(size_t sets, size_t ways, size_t linesz, const char* name, slot_id_t num_of_slots);
+    slot_id_t add_enclave(enclave_id_t id);
+    void access(uint64_t addr, size_t bytes, bool store, enclave_id_t id);
+    //void print_stats();
+  protected:
+    uint64_t* check_tag(uint64_t addr, enclave_id_t id);
+    uint64_t victimize(uint64_t addr);
+    remapping_table_t** rmts;
+    size_t max_enclaves;
+};
+
+//This is a fully associative cache, which only has one set of cache blocks.
 class fa_cache_sim_t : public cache_sim_t
 {
  public:
@@ -75,7 +104,7 @@ class fa_cache_sim_t : public cache_sim_t
   std::map<uint64_t, uint64_t> tags;
 };
 
-//Memtracer wrapper around cache class
+//Memtracer wrapper around cache class, which is used to be able to hook it to the MMU.
 class cache_memtracer_t : public memtracer_t
 {
  public:

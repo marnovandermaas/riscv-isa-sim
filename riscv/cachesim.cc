@@ -35,6 +35,7 @@ cache_sim_t* cache_sim_t::construct(const char* config, const char* name)
   if (ways > 4 /* empirical */ && sets == 1)
     return new fa_cache_sim_t(ways, linesz, name);
   return new cache_sim_t(sets, ways, linesz, name);
+  //TODO add partitioned cache to this.
 }
 
 void cache_sim_t::init()
@@ -151,6 +152,32 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store)
 
   if (store)
     *check_tag(addr) |= DIRTY;
+}
+
+remapping_table_t::remapping_table_t(size_t sets)
+{ //TODO fill in
+}
+
+partitioned_cache_sim_t::partitioned_cache_sim_t(size_t sets, size_t ways, size_t linesz, const char * name, slot_id_t num_of_slots) : cache_sim_t(sets, ways, linesz, name)
+{
+  max_enclaves = num_of_slots;
+  rmts = new remapping_table_t* [num_of_slots];
+}
+
+slot_id_t partitioned_cache_sim_t::add_enclave(enclave_id_t id)
+{ //TODO fill in
+}
+
+void partitioned_cache_sim_t::access(uint64_t addr, size_t bytes, bool store, enclave_id_t id)
+{ //TODO fill in
+}
+
+uint64_t* partitioned_cache_sim_t::check_tag(uint64_t addr, enclave_id_t id)
+{ //TODO fill in
+}
+
+uint64_t partitioned_cache_sim_t::victimize(uint64_t addr)
+{ //TODO fill in
 }
 
 fa_cache_sim_t::fa_cache_sim_t(size_t ways, size_t linesz, const char* name)
