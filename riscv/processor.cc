@@ -306,6 +306,7 @@ void processor_t::take_trap(trap_t& t, reg_t epc)
 void processor_t::disasm(insn_t insn)
 {
   uint64_t bits = insn.bits() & ((1ULL << (8 * insn_length(insn.bits()))) - 1);
+  //fprintf(stderr, "Dissassembling instruction: %s .\n", disassembler->disassemble(insn).c_str());
   if (last_pc != state.pc || last_bits != bits) {
     if (executions != 1) {
       fprintf(stderr, "core %3d: Executed %" PRIx64 " times\n", id, executions);
@@ -333,6 +334,7 @@ void processor_t::set_csr(int which, reg_t val)
   reg_t delegable_ints = MIP_SSIP | MIP_STIP | MIP_SEIP
                        | ((ext != NULL) << IRQ_COP);
   reg_t all_ints = delegable_ints | MIP_MSIP | MIP_MTIP;
+  //fprintf(stderr, "Processor_t: Setting CSR 0x%x, to value %lu.\n", which, val);
   switch (which)
   {
     case CSR_FFLAGS:
@@ -531,6 +533,14 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_DSCRATCH:
       state.dscratch = val;
       break;
+    #ifdef BARE_METAL_OUTPUT_CSR
+    case CSR_BAREMETALOUTPUT:
+      fprintf(stderr, "%c", ((int) val));
+      break;
+    case CSR_BAREMETALEXIT:
+      sim->request_halt(id);//exit(0);
+      break;
+    #endif //bare metal output csr
   }
 }
 
@@ -555,6 +565,12 @@ reg_t processor_t::get_csr(int which)
     return 0;
   if (which >= CSR_MHPMEVENT3 && which <= CSR_MHPMEVENT31)
     return 0;
+
+  #ifdef BARE_METAL_OUTPUT_CSR
+  if (which == CSR_BAREMETALOUTPUT || which == CSR_BAREMETALEXIT){
+    return 0;
+  }
+  #endif
 
   switch (which)
   {

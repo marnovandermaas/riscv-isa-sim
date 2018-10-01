@@ -86,8 +86,8 @@ int main(int argc, char** argv)
   size_t nprocs = 1;
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
-  std::unique_ptr<icache_sim_t> ic;
-  std::unique_ptr<dcache_sim_t> dc;
+  const char* ic_string = NULL;
+  const char* dc_string = NULL;
   std::unique_ptr<cache_sim_t> l2;
   std::function<extension_t*()> extension;
   const char* isa = DEFAULT_ISA;
@@ -123,8 +123,8 @@ int main(int argc, char** argv)
   parser.option(0, "rbb-port", 1, [&](const char* s){use_rbb = true; rbb_port = atoi(s);});
   parser.option(0, "pc", 1, [&](const char* s){start_pc = strtoull(s, 0, 0);});
   parser.option(0, "hartids", 1, hartids_parser);
-  parser.option(0, "ic", 1, [&](const char* s){ic.reset(new icache_sim_t(s));});
-  parser.option(0, "dc", 1, [&](const char* s){dc.reset(new dcache_sim_t(s));});
+  parser.option(0, "ic", 1, [&](const char* s){ic_string = s;});
+  parser.option(0, "dc", 1, [&](const char* s){dc_string = s;});
   parser.option(0, "l2", 1, [&](const char* s){l2.reset(cache_sim_t::construct(s, "L2$"));});
   parser.option(0, "isa", 1, [&](const char* s){isa = s;});
   parser.option(0, "extension", 1, [&](const char* s){extension = find_extension(s);});
@@ -151,8 +151,27 @@ int main(int argc, char** argv)
   if (!*argv1)
     help();
 
+  std::unique_ptr<icache_sim_t> ics[nprocs];
+  std::unique_ptr<dcache_sim_t> dcs[nprocs];
+  icache_sim_t *ics_arg[nprocs];
+  dcache_sim_t *dcs_arg[nprocs];
+  if (ic_string != NULL) {
+    for(size_t i = 0; i < nprocs; i++) {
+      icache_sim_t *icache = new icache_sim_t(ic_string);
+      ics[i].reset(icache);
+      ics_arg[i] = icache;
+    }
+  }
+  if (dc_string != NULL) {
+    for(size_t i = 0; i < nprocs; i++) {
+      dcache_sim_t *dcache = new dcache_sim_t(dc_string);
+      dcs[i].reset(dcache);
+      dcs_arg[i] = dcache;
+    }
+  }
+
   sim_t s(isa, nprocs, halted, start_pc, mems, htif_args, std::move(hartids),
-      progsize, max_bus_master_bits, require_authentication);
+      progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(new jtag_dtm_t(&s.debug_module));
   if (use_rbb) {
@@ -166,12 +185,12 @@ int main(int argc, char** argv)
     return 0;
   }
 
-  if (ic && l2) ic->set_miss_handler(&*l2);
-  if (dc && l2) dc->set_miss_handler(&*l2);
   for (size_t i = 0; i < nprocs; i++)
   {
-    if (ic) s.get_core(i)->get_mmu()->register_memtracer(&*ic);
-    if (dc) s.get_core(i)->get_mmu()->register_memtracer(&*dc);
+    if (ic_string && l2) ics[i]->set_miss_handler(&*l2);
+    if (dc_string && l2) dcs[i]->set_miss_handler(&*l2);
+    if (ic_string) s.get_core(i)->get_mmu()->register_memtracer(&*ics[i]);
+    if (dc_string) s.get_core(i)->get_mmu()->register_memtracer(&*dcs[i]);
     if (extension) s.get_core(i)->register_extension(extension());
   }
 

@@ -24,15 +24,33 @@ static void handle_signal(int sig)
   signal(sig, &handle_signal);
 }
 
+void sim_t::request_halt(uint32_t id) {
+  static bool procRequests[64] = {false};
+  //fprintf(stderr, "sim_t: halt request received from core %u of %lu.\n", id, procs.size());
+  if(id >= 64) exit(-1);
+  procRequests[id] = true;
+  for(unsigned int i = 0; i < procs.size(); i++) {
+    if(!procRequests[i]) return;
+  }
+  fprintf(stderr, "\nPrinting Cache Stats:\n");
+  for(size_t i = 0; i < procs.size(); i++) {
+    if(ics[i] || dcs[i]) fprintf(stderr, "Core %lu:\n", i);
+    if(ics[i]) ics[i]->print_stats();
+    if(dcs[i]) dcs[i]->print_stats();
+  }
+  if(l2 != NULL) l2->print_stats();
+  exit(0);
+}
+
 sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
              std::vector<std::pair<reg_t, mem_t*>> mems,
              const std::vector<std::string>& args,
              std::vector<int> const hartids, unsigned progsize,
-             unsigned max_bus_master_bits, bool require_authentication)
+             unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, cache_sim_t *l2)
   : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
-    debug_module(this, progsize, max_bus_master_bits, require_authentication)
+    debug_module(this, progsize, max_bus_master_bits, require_authentication), ics(ics), dcs(dcs), l2(l2)
 {
   signal(SIGINT, &handle_signal);
 
@@ -94,7 +112,9 @@ void sim_t::main()
 int sim_t::run()
 {
   host = context_t::current();
+  //fprintf(stderr, "sim_t initializing target.\n");
   target.init(sim_thread_main, this);
+  //fprintf(stderr, "sim_t running htif_t.\n");
   return htif_t::run();
 }
 
@@ -103,6 +123,7 @@ void sim_t::step(size_t n)
   for (size_t i = 0, steps = 0; i < n; i += steps)
   {
     steps = std::min(n - i, INTERLEAVE - current_step);
+    //fprintf(stderr, "%lu %d ", current_proc, steps);
     procs[current_proc]->step(steps);
 
     current_step += steps;
@@ -146,6 +167,7 @@ void sim_t::set_procs_debug(bool value)
 
 bool sim_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
 {
+  //fprintf(stderr, "Loading address 0x%016"PRIx64".\n", addr); //TODO remove
   if (addr + len < addr)
     return false;
   return bus.load(addr, len, bytes);

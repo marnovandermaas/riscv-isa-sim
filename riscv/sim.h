@@ -7,6 +7,7 @@
 #include "devices.h"
 #include "debug_module.h"
 #include "simif.h"
+#include "cachesim.h"
 #include <fesvr/htif.h>
 #include <fesvr/context.h>
 #include <vector>
@@ -23,11 +24,12 @@ public:
   sim_t(const char* isa, size_t _nprocs,  bool halted, reg_t start_pc,
         std::vector<std::pair<reg_t, mem_t*>> mems,
         const std::vector<std::string>& args, const std::vector<int> hartids,
-        unsigned progsize, unsigned max_bus_master_bits, bool require_authentication);
+        unsigned progsize, unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, cache_sim_t *l2);
   ~sim_t();
 
   // run the simulation to completion
   int run();
+  void request_halt(uint32_t id);
   void set_debug(bool value);
   void set_log(bool value);
   void set_histogram(bool value);
@@ -57,7 +59,7 @@ private:
 
   processor_t* get_core(const std::string& i);
   void step(size_t n); // step through simulation
-  static const size_t INTERLEAVE = 5000;
+  static const size_t INTERLEAVE = 1; //TODO set back to 5000
   static const size_t INSNS_PER_RTC_TICK = 100; // 10 MHz clock for 1 BIPS core
   static const size_t CPU_HZ = 1000000000; // 1GHz CPU
   size_t current_step;
@@ -118,6 +120,9 @@ public:
   // enumerate processors, which segfaults if procs hasn't been initialized
   // yet.
   debug_module_t debug_module;
+  icache_sim_t **ics;
+  dcache_sim_t **dcs;
+  cache_sim_t *l2;
 };
 
 extern volatile bool ctrlc_pressed;

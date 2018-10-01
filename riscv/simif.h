@@ -16,6 +16,7 @@ public:
   virtual bool mmio_store(reg_t addr, size_t len, const uint8_t* bytes) = 0;
   // Callback for processors to let the simulation know they were reset.
   virtual void proc_reset(unsigned id) = 0;
+  virtual void request_halt(uint32_t id) = 0;
 };
 
 #endif

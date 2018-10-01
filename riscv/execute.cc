@@ -75,6 +75,7 @@ inline void processor_t::update_histogram(reg_t pc)
 static reg_t execute_insn(processor_t* p, reg_t pc, insn_fetch_t fetch)
 {
   commit_log_stash_privilege(p);
+  //fprintf(stderr, "execute.cc executing instruction.\n"); // remove
   reg_t npc = fetch.func(p, fetch.insn, pc);
   if (npc != PC_SERIALIZE_BEFORE) {
     commit_log_print_insn(p->get_state(), pc, fetch.insn);
@@ -140,14 +141,14 @@ void processor_t::step(size_t n)
           if (unlikely(state.single_step == state.STEP_STEPPING)) {
             state.single_step = state.STEP_STEPPED;
           }
-
+          //fprintf(stderr, "execute.cc: loading instruction.\n");
           insn_fetch_t fetch = mmu->load_insn(pc);
           if (debug && !state.serialized)
             disasm(fetch.insn);
+          //fprintf(stderr, "execute.cc: starting execute.\n");
           pc = execute_insn(this, pc, fetch);
-
+          //fprintf(stderr, "execute.cc: advancing pc.\n");
           advance_pc();
-
           if (unlikely(state.pc >= DEBUG_ROM_ENTRY &&
                        state.pc < DEBUG_END)) {
             // We're waiting for the debugger to tell us something.
@@ -208,6 +209,7 @@ void processor_t::step(size_t n)
     }
     catch(trap_t& t)
     {
+      fprintf(stderr, "execute.cc: taking trap %s.\n", t.name());
       take_trap(t, pc);
       n = instret;
 
@@ -245,6 +247,7 @@ void processor_t::step(size_t n)
       }
     }
 
+    //fprintf(stderr, "execute.cc: changing counters.\n");
     state.minstret += instret;
     n -= instret;
   }
