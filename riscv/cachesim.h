@@ -9,6 +9,7 @@
 #include <map>
 #include <cstdint>
 
+//Linear-feedback shift register
 class lfsr_t
 {
  public:
@@ -62,6 +63,7 @@ class cache_sim_t
   void init();
 };
 
+//As far as I can tell, just a faster implementatino of cache, when ways >4 and sets == 1
 class fa_cache_sim_t : public cache_sim_t
 {
  public:
@@ -73,6 +75,7 @@ class fa_cache_sim_t : public cache_sim_t
   std::map<uint64_t, uint64_t> tags;
 };
 
+//Memtracer wrapper around cache class
 class cache_memtracer_t : public memtracer_t
 {
  public:
@@ -97,6 +100,7 @@ class cache_memtracer_t : public memtracer_t
   cache_sim_t* cache;
 };
 
+//instruction cache subclass of memory tracer
 class icache_sim_t : public cache_memtracer_t
 {
  public:
@@ -111,6 +115,7 @@ class icache_sim_t : public cache_memtracer_t
   }
 };
 
+//data cache subclass of memory tracer
 class dcache_sim_t : public cache_memtracer_t
 {
  public:
