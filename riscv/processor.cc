@@ -2,6 +2,7 @@
 
 #include "processor.h"
 #include "extension.h"
+#include "enclave.h"
 #include "common.h"
 #include "config.h"
 #include "simif.h"

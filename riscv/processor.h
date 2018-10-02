@@ -335,6 +335,11 @@ private:
   uint64_t last_pc, last_bits, executions;
 };
 
+class enclave_t: public Processor_t
+{ //TODO fill in.
+
+};
+
 reg_t illegal_instruction(processor_t* p, insn_t insn, reg_t pc);
 
 #define REGISTER_INSN(proc, name, match, mask) \

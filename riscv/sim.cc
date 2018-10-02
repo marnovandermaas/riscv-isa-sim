@@ -42,12 +42,12 @@ void sim_t::request_halt(uint32_t id) {
   exit(0);
 }
 
-sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
+sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_t start_pc,
              std::vector<std::pair<reg_t, mem_t*>> mems,
              const std::vector<std::string>& args,
              std::vector<int> const hartids, unsigned progsize,
              unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, cache_sim_t *l2)
-  : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))),
+  : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), enclaves(nenclaves),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
     debug_module(this, progsize, max_bus_master_bits, require_authentication), ics(ics), dcs(dcs), l2(l2)
@@ -65,10 +65,13 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
     for (size_t i = 0; i < procs.size(); i++) {
       procs[i] = new processor_t(isa, this, i, halted);
     }
+    for (size_t i = procs.size(); i < enclaves.size()+procs.size(); i++) {
+      enclaves[i] = new enclave_t(isa, this, i, halted);
+    }
   }
   else {
     if (hartids.size() != procs.size()) {
-      std::cerr << "Number of specified hartids doesn't match number of processors" << strerror(errno) << std::endl;
+      std::cerr << "Number of specified hartids doesn't match number of processors or you specified both hardids and enclaves" << strerror(errno) << std::endl;
       exit(1);
     }
     for (size_t i = 0; i < procs.size(); i++) {

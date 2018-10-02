@@ -33,6 +33,7 @@ static void help()
   fprintf(stderr, "  --dc=<S>:<W>:<B>        W ways, and B-byte blocks (with S and\n");
   fprintf(stderr, "  --l2=<S>:<W>:<B>        B both powers of 2).\n");
   fprintf(stderr, "  --extension=<name>    Specify RoCC Extension\n");
+  fprintf(stderr, "  --enclave=<number>    Number of enclave threads to add [default 0]\n");
   fprintf(stderr, "  --extlib=<name>       Shared library to load\n");
   fprintf(stderr, "  --rbb-port=<port>     Listen on <port> for remote bitbang connection\n");
   fprintf(stderr, "  --dump-dts            Print device tree string and exit\n");
@@ -81,9 +82,11 @@ int main(int argc, char** argv)
   bool halted = false;
   bool histogram = false;
   bool log = false;
+typedef uint64_t enclave_id_t;
   bool dump_dts = false;
   bool dtb_enabled = true;
   size_t nprocs = 1;
+  size_t nenclaves = 0;
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
   const char* ic_string = NULL;
@@ -128,6 +131,7 @@ int main(int argc, char** argv)
   parser.option(0, "l2", 1, [&](const char* s){l2.reset(cache_sim_t::construct(s, "L2$"));});
   parser.option(0, "isa", 1, [&](const char* s){isa = s;});
   parser.option(0, "extension", 1, [&](const char* s){extension = find_extension(s);});
+  parser.option(0, "enclave", 1, [&](const char* s){nenclaves = atoi(s);});
   parser.option(0, "dump-dts", 0, [&](const char *s){dump_dts = true;});
   parser.option(0, "disable-dtb", 0, [&](const char *s){dtb_enabled = false;});
   parser.option(0, "extlib", 1, [&](const char *s){
@@ -151,26 +155,26 @@ int main(int argc, char** argv)
   if (!*argv1)
     help();
 
-  std::unique_ptr<icache_sim_t> ics[nprocs];
-  std::unique_ptr<dcache_sim_t> dcs[nprocs];
-  icache_sim_t *ics_arg[nprocs];
-  dcache_sim_t *dcs_arg[nprocs];
+  std::unique_ptr<icache_sim_t> ics[nenclaves + 1];
+  std::unique_ptr<dcache_sim_t> dcs[nenclaves + 1];
+  icache_sim_t *ics_arg[nenclaves + 1];
+  dcache_sim_t *dcs_arg[nenclaves + 1];
   if (ic_string != NULL) {
-    for(size_t i = 0; i < nprocs; i++) {
+    for(size_t i = 0; i < nenclaves + 1; i++) {
       icache_sim_t *icache = new icache_sim_t(ic_string);
       ics[i].reset(icache);
       ics_arg[i] = icache;
     }
   }
   if (dc_string != NULL) {
-    for(size_t i = 0; i < nprocs; i++) {
+    for(size_t i = 0; i < nenclaves + 1; i++) {
       dcache_sim_t *dcache = new dcache_sim_t(dc_string);
       dcs[i].reset(dcache);
       dcs_arg[i] = dcache;
     }
   }
 
-  sim_t s(isa, nprocs, halted, start_pc, mems, htif_args, std::move(hartids),
+  sim_t s(isa, nprocs, nenclaves, halted, start_pc, mems, htif_args, std::move(hartids),
       progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(new jtag_dtm_t(&s.debug_module));
@@ -185,13 +189,22 @@ int main(int argc, char** argv)
     return 0;
   }
 
+  if (ic_string && l2) ics[0]->set_miss_handler(&*l2);
+  if (dc_string && l2) dcs[0]->set_miss_handler(&*l2);
   for (size_t i = 0; i < nprocs; i++)
   {
-    if (ic_string && l2) ics[i]->set_miss_handler(&*l2);
-    if (dc_string && l2) dcs[i]->set_miss_handler(&*l2);
-    if (ic_string) s.get_core(i)->get_mmu()->register_memtracer(&*ics[i]);
-    if (dc_string) s.get_core(i)->get_mmu()->register_memtracer(&*dcs[i]);
+    if (ic_string) s.get_core(i)->get_mmu()->register_memtracer(&*ics[0]);
+    if (dc_string) s.get_core(i)->get_mmu()->register_memtracer(&*dcs[0]);
     if (extension) s.get_core(i)->register_extension(extension());
+  }
+
+  for (size_t i = 0; i < nenclaves; i++)
+  {
+    if (ic_string && l2) ics[i+1]->set_miss_handler(&*l2);
+    if (dc_string && l2) ics[i+1]->set_miss_handler(&*l2);
+    if (ic_string) s.get_enclave(i)->get_mmu()->register_memtracer(&*ics[i+1]);
+    if (dc_string) s.get_enclave(i)->get_mmu()->register_memtracer(&*dcs[i+1]);
+    if (extension) s.get_enclave(i)->register_extension(extension());
   }
 
   s.set_debug(debug);

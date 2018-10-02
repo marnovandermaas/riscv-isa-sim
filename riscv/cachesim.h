@@ -4,13 +4,13 @@
 #define _RISCV_CACHE_SIM_H
 
 #include "memtracer.h"
+#include "enclave.h"
 #include <cstring>
 #include <string>
 #include <map>
 #include <cstdint>
 
 typedef size_t slot_id_t;
-typedef uint64_t enclave_id_t;
 
 //Linear-feedback shift register
 class lfsr_t
@@ -55,7 +55,7 @@ class cache_sim_t
   size_t idx_shift;
 
   uint64_t* tags;
-  
+
   uint64_t read_accesses;
   uint64_t read_misses;
   uint64_t bytes_read;
