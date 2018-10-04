@@ -82,7 +82,7 @@ int main(int argc, char** argv)
   bool halted = false;
   bool histogram = false;
   bool log = false;
-typedef uint64_t enclave_id_t;
+  typedef uint64_t enclave_id_t;
   bool dump_dts = false;
   bool dtb_enabled = true;
   size_t nprocs = 1;
@@ -159,22 +159,25 @@ typedef uint64_t enclave_id_t;
   std::unique_ptr<dcache_sim_t> dcs[nenclaves + 1];
   icache_sim_t *ics_arg[nenclaves + 1];
   dcache_sim_t *dcs_arg[nenclaves + 1];
-  if (ic_string != NULL) {
-    for(size_t i = 0; i < nenclaves + 1; i++) {
+
+  for(size_t i = 0; i < nenclaves + 1; i++) {
+    if (ic_string != NULL) {
       icache_sim_t *icache = new icache_sim_t(ic_string);
       ics[i].reset(icache);
       ics_arg[i] = icache;
+    } else {
+      ics_arg[i] = NULL;
     }
-  }
-  if (dc_string != NULL) {
-    for(size_t i = 0; i < nenclaves + 1; i++) {
+    if (dc_string != NULL) {
       dcache_sim_t *dcache = new dcache_sim_t(dc_string);
       dcs[i].reset(dcache);
       dcs_arg[i] = dcache;
+    } else {
+      dcs_arg[i] = NULL;
     }
   }
 
-  sim_t s(isa, nprocs, nenclaves, halted, start_pc, mems, htif_args, std::move(hartids),
+  sim_t s(isa, nprocs + nenclaves, nenclaves, halted, start_pc, mems, htif_args, std::move(hartids),
       progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(new jtag_dtm_t(&s.debug_module));
@@ -202,9 +205,10 @@ typedef uint64_t enclave_id_t;
   {
     if (ic_string && l2) ics[i+1]->set_miss_handler(&*l2);
     if (dc_string && l2) ics[i+1]->set_miss_handler(&*l2);
-    if (ic_string) s.get_enclave(i)->get_mmu()->register_memtracer(&*ics[i+1]);
-    if (dc_string) s.get_enclave(i)->get_mmu()->register_memtracer(&*dcs[i+1]);
-    if (extension) s.get_enclave(i)->register_extension(extension());
+    size_t core_id = i + nprocs;
+    if (ic_string) s.get_core(core_id)->get_mmu()->register_memtracer(&*ics[i+1]);
+    if (dc_string) s.get_core(core_id)->get_mmu()->register_memtracer(&*dcs[i+1]);
+    if (extension) s.get_core(core_id)->register_extension(extension());
   }
 
   s.set_debug(debug);

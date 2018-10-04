@@ -6,6 +6,7 @@
 #include "config.h"
 #include "devices.h"
 #include "trap.h"
+#include "enclave.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -335,9 +336,13 @@ private:
   uint64_t last_pc, last_bits, executions;
 };
 
-class enclave_t: public Processor_t
+class enclave_t : public processor_t
 { //TODO fill in.
-
+public:
+  explicit enclave_t(const char* isa, simif_t* sim, uint32_t id, enclave_id_t e_id, bool halt_on_reset=false);
+  ~enclave_t();
+private:
+  enclave_id_t enclave_id;
 };
 
 reg_t illegal_instruction(processor_t* p, insn_t insn, reg_t pc);

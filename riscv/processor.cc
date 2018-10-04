@@ -2,7 +2,6 @@
 
 #include "processor.h"
 #include "extension.h"
-#include "enclave.h"
 #include "common.h"
 #include "config.h"
 #include "simif.h"
@@ -235,6 +234,7 @@ void processor_t::set_privilege(reg_t prv)
 
 void processor_t::enter_debug_mode(uint8_t cause)
 {
+  fprintf(stderr, "Entering debug mode on core %u, because of cause %u\n", id, cause);
   state.dcsr.cause = cause;
   state.dcsr.prv = state.prv;
   set_privilege(PRV_M);
@@ -527,6 +527,7 @@ void processor_t::set_csr(int which, reg_t val)
       state.dcsr.ebreaks = get_field(val, DCSR_EBREAKS);
       state.dcsr.ebreaku = get_field(val, DCSR_EBREAKU);
       state.dcsr.halt = get_field(val, DCSR_HALT);
+      fprintf(stderr, "Set halt status register to %d on core %u\n", state.dcsr.halt, id);
       break;
     case CSR_DPC:
       state.dpc = val & ~(reg_t)1;
@@ -836,4 +837,16 @@ void processor_t::trigger_updated()
       mmu->check_triggers_store = true;
     }
   }
+}
+
+enclave_t::enclave_t(const char* isa, simif_t* sim, uint32_t id,
+        enclave_id_t e_id, bool halt_on_reset)
+  : processor_t(isa, sim, id, halt_on_reset)
+{
+  enclave_id = e_id;
+  //fprintf(stderr, "Created enclave %lu and set halt_request to %d and halt_on_reset set to %d\n", enclave_id, halt_request, halt_on_reset);
+}
+
+enclave_t::~enclave_t()
+{
 }

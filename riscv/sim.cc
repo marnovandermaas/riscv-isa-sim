@@ -26,18 +26,17 @@ static void handle_signal(int sig)
 
 void sim_t::request_halt(uint32_t id) {
   static bool procRequests[64] = {false};
-  //fprintf(stderr, "sim_t: halt request received from core %u of %lu.\n", id, procs.size());
   if(id >= 64) exit(-1);
   procRequests[id] = true;
   for(unsigned int i = 0; i < procs.size(); i++) {
     if(!procRequests[i]) return;
   }
-  fprintf(stderr, "\nPrinting Cache Stats:\n");
-  for(size_t i = 0; i < procs.size(); i++) {
-    if(ics[i] || dcs[i]) fprintf(stderr, "Core %lu:\n", i);
+  for(size_t i = 0; i < nenclaves + 1; i++) {
+    if(ics[i] || dcs[i]) fprintf(stderr, "\nCache stats for enclave %lu:\n", i);
     if(ics[i]) ics[i]->print_stats();
     if(dcs[i]) dcs[i]->print_stats();
   }
+  fprintf(stderr, "\nShared Cache:\n");
   if(l2 != NULL) l2->print_stats();
   exit(0);
 }
@@ -47,7 +46,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
              const std::vector<std::string>& args,
              std::vector<int> const hartids, unsigned progsize,
              unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, cache_sim_t *l2)
-  : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), enclaves(nenclaves),
+  : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), nenclaves(nenclaves),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
     debug_module(this, progsize, max_bus_master_bits, require_authentication), ics(ics), dcs(dcs), l2(l2)
@@ -62,11 +61,12 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
   debug_mmu = new mmu_t(this, NULL);
 
   if (hartids.size() == 0) {
-    for (size_t i = 0; i < procs.size(); i++) {
+    for (size_t i = 0; i < procs.size() - nenclaves; i++) {
       procs[i] = new processor_t(isa, this, i, halted);
     }
-    for (size_t i = procs.size(); i < enclaves.size()+procs.size(); i++) {
-      enclaves[i] = new enclave_t(isa, this, i, halted);
+    enclave_id_t current_id = 1;
+    for (size_t i = procs.size() - nenclaves; i < procs.size(); i++) {
+      procs[i] = new enclave_t(isa, this, i, current_id++, halted);
     }
   }
   else {
@@ -115,9 +115,7 @@ void sim_t::main()
 int sim_t::run()
 {
   host = context_t::current();
-  //fprintf(stderr, "sim_t initializing target.\n");
   target.init(sim_thread_main, this);
-  //fprintf(stderr, "sim_t running htif_t.\n");
   return htif_t::run();
 }
 
@@ -126,14 +124,16 @@ void sim_t::step(size_t n)
   for (size_t i = 0, steps = 0; i < n; i += steps)
   {
     steps = std::min(n - i, INTERLEAVE - current_step);
-    //fprintf(stderr, "%lu %d ", current_proc, steps);
-    procs[current_proc]->step(steps);
+    if (current_proc < procs.size()) {
+      procs[current_proc]->step(steps);
+    }
 
     current_step += steps;
     if (current_step == INTERLEAVE)
     {
       current_step = 0;
       procs[current_proc]->get_mmu()->yield_load_reservation();
+
       if (++current_proc == procs.size()) {
         current_proc = 0;
         clint->increment(INTERLEAVE / INSNS_PER_RTC_TICK);
@@ -164,13 +164,13 @@ void sim_t::set_histogram(bool value)
 
 void sim_t::set_procs_debug(bool value)
 {
-  for (size_t i=0; i< procs.size(); i++)
+  for (size_t i = 0; i < procs.size(); i++) {
     procs[i]->set_debug(value);
+  }
 }
 
 bool sim_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
 {
-  //fprintf(stderr, "Loading address 0x%016"PRIx64".\n", addr); //TODO remove
   if (addr + len < addr)
     return false;
   return bus.load(addr, len, bytes);

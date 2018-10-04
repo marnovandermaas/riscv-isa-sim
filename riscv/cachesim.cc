@@ -77,8 +77,11 @@ cache_sim_t::~cache_sim_t()
 
 void cache_sim_t::print_stats()
 {
-  if(read_accesses + write_accesses == 0)
+  if(read_accesses + write_accesses == 0) {
+    std::cout << name << " ";
+    std::cout << "No stats recorded" << std::endl;
     return;
+  }
 
   float mr = 100.0f*(read_misses+write_misses)/(read_accesses+write_accesses);
 
