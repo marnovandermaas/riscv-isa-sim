@@ -91,7 +91,9 @@ int main(int argc, char** argv)
   std::vector<std::pair<reg_t, mem_t*>> mems;
   const char* ic_string = NULL;
   const char* dc_string = NULL;
+  const char* llc_string = NULL;
   std::unique_ptr<cache_sim_t> l2;
+  std::unique_ptr<partitioned_cache_sim_t> partitioned_l2;
   std::function<extension_t*()> extension;
   const char* isa = DEFAULT_ISA;
   uint16_t rbb_port = 0;
@@ -128,7 +130,7 @@ int main(int argc, char** argv)
   parser.option(0, "hartids", 1, hartids_parser);
   parser.option(0, "ic", 1, [&](const char* s){ic_string = s;});
   parser.option(0, "dc", 1, [&](const char* s){dc_string = s;});
-  parser.option(0, "l2", 1, [&](const char* s){l2.reset(cache_sim_t::construct(s, "L2$"));});
+  parser.option(0, "l2", 1, [&](const char* s){llc_string = s;});
   parser.option(0, "isa", 1, [&](const char* s){isa = s;});
   parser.option(0, "extension", 1, [&](const char* s){extension = find_extension(s);});
   parser.option(0, "enclave", 1, [&](const char* s){nenclaves = atoi(s);});
@@ -157,8 +159,21 @@ int main(int argc, char** argv)
 
   std::unique_ptr<icache_sim_t> ics[nenclaves + 1];
   std::unique_ptr<dcache_sim_t> dcs[nenclaves + 1];
+  std::unique_ptr<remapping_table_t> rmts[nenclaves + 1];
   icache_sim_t *ics_arg[nenclaves + 1];
   dcache_sim_t *dcs_arg[nenclaves + 1];
+  remapping_table_t *rmts_arg[nenclaves + 1];
+
+  size_t sets, ways, linesz;
+  if(llc_string) {
+    if(!nenclaves) {
+      l2.reset(cache_sim_t::construct(llc_string, "L2$"));
+    } else {
+      fprintf(stderr, "spike.cc: Initializing partitioned cache.\n");
+      cache_sim_t::parse_config_string(llc_string, &sets, &ways, &linesz);
+      partitioned_l2.reset(new partitioned_cache_sim_t(sets*ways));
+    }
+  }
 
   for(size_t i = 0; i < nenclaves + 1; i++) {
     if (ic_string != NULL) {
@@ -175,7 +190,15 @@ int main(int argc, char** argv)
     } else {
       dcs_arg[i] = NULL;
     }
+    if ( llc_string != NULL && nenclaves > 0) {
+      remapping_table_t *rmt = new remapping_table_t(sets, ways, linesz, "RMT", &*partitioned_l2, i);
+      rmts[i].reset(rmt);
+      rmts_arg[i] = rmt;
+    } else {
+      rmts_arg[i] = NULL;
+    }
   }
+
 
   sim_t s(isa, nprocs + nenclaves, nenclaves, halted, start_pc, mems, htif_args, std::move(hartids),
       progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2);
@@ -192,8 +215,18 @@ int main(int argc, char** argv)
     return 0;
   }
 
-  if (ic_string && l2) ics[0]->set_miss_handler(&*l2);
-  if (dc_string && l2) dcs[0]->set_miss_handler(&*l2);
+  if (ic_string) {
+    if(l2)
+      ics[0]->set_miss_handler(&*l2);
+    if(partitioned_l2)
+      ics[0]->set_miss_handler(rmts_arg[0]);
+  }
+  if (dc_string) {
+    if(l2)
+      dcs[0]->set_miss_handler(&*l2);
+    if(partitioned_l2)
+      dcs[0]->set_miss_handler(rmts_arg[0]);
+  }
   for (size_t i = 0; i < nprocs; i++)
   {
     if (ic_string) s.get_core(i)->get_mmu()->register_memtracer(&*ics[0]);
@@ -203,11 +236,25 @@ int main(int argc, char** argv)
 
   for (size_t i = 0; i < nenclaves; i++)
   {
-    if (ic_string && l2) ics[i+1]->set_miss_handler(&*l2);
-    if (dc_string && l2) ics[i+1]->set_miss_handler(&*l2);
     size_t core_id = i + nprocs;
-    if (ic_string) s.get_core(core_id)->get_mmu()->register_memtracer(&*ics[i+1]);
-    if (dc_string) s.get_core(core_id)->get_mmu()->register_memtracer(&*dcs[i+1]);
+    if (ic_string) {
+      s.get_core(core_id)->get_mmu()->register_memtracer(&*ics[i+1]);
+      if(l2) {
+        ics[i+1]->set_miss_handler(&*l2);
+      }
+      if(partitioned_l2) {
+        ics[i+1]->set_miss_handler(rmts_arg[i+1]);
+      }
+    }
+    if (dc_string) {
+      s.get_core(core_id)->get_mmu()->register_memtracer(&*dcs[i+1]);
+      if(l2) {
+        dcs[i+1]->set_miss_handler(&*l2);
+      }
+      if(partitioned_l2) {
+        dcs[i+1]->set_miss_handler(rmts_arg[i+1]);
+      }
+    }
     if (extension) s.get_core(core_id)->register_extension(extension());
   }
 

@@ -35,9 +35,10 @@ class cache_sim_t
 
   void access(uint64_t addr, size_t bytes, bool store);
   void print_stats();
-  void set_miss_handler(cache_sim_t* mh) { miss_handler = mh; }
+  void set_miss_handler(cache_sim_t* mh);
 
   static cache_sim_t* construct(const char* config, const char* name);
+  static void parse_config_string(const char* config, size_t *sets, size_t *ways, size_t *linesz); //Extracts sets ways and linesz from config string.
 
  protected:
   static const uint64_t VALID = 1ULL << 63;
@@ -69,27 +70,39 @@ class cache_sim_t
   void init();
 };
 
-class remapping_table_t
-{
-  public:
-    remapping_table_t(size_t sets);
-};
-
 //Wrapper class for LLC that is partitioned per enclave.
-class partitioned_cache_sim_t : public cache_sim_t
+class partitioned_cache_sim_t
 {
 //Just use the static construct function from the cache_sim_t
 //Partitioned cache has an owner identifier per set.
   public:
-    partitioned_cache_sim_t(size_t sets, size_t ways, size_t linesz, const char* name, slot_id_t num_of_slots);
-    slot_id_t add_enclave(enclave_id_t id);
-    void access(uint64_t addr, size_t bytes, bool store, enclave_id_t id);
-    //void print_stats();
+    partitioned_cache_sim_t(size_t slots); //Set/Way mapping done in remapping table
+    bool access(size_t slot, uint64_t addr, enclave_id_t id);
+    size_t victimize(uint64_t addr, size_t slot, enclave_id_t id); //Returns a random new slot to replace.
   protected:
     uint64_t* check_tag(uint64_t addr, enclave_id_t id);
-    uint64_t victimize(uint64_t addr);
-    remapping_table_t** rmts;
-    size_t max_enclaves;
+  private:
+    uint64_t *addresses;
+    enclave_id_t *identifiers;
+    size_t cache_size;
+};
+
+class remapping_table_t : public cache_sim_t
+{
+  public:
+    remapping_table_t(size_t sets, size_t ways, size_t linesz, const char* name, partitioned_cache_sim_t* l2, enclave_id_t id); //Assuming direct mapped for now (way = 1)
+    void print_stats();
+    void access(uint64_t addr, size_t bytes, bool store);
+  private:
+    partitioned_cache_sim_t *llc;
+    enclave_id_t enclave_id;
+    size_t *slots;
+    uint64_t victimize(uint64_t addr, size_t index);
+  protected:
+    virtual uint64_t* check_tag(uint64_t addr, size_t *slot);
+    virtual uint64_t victimize(uint64_t addr);
+    uint64_t llc_read_misses;
+    uint64_t llc_write_misses;
 };
 
 //This is a fully associative cache, which only has one set of cache blocks.

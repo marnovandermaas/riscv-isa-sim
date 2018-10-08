@@ -23,19 +23,24 @@ static void help()
 
 cache_sim_t* cache_sim_t::construct(const char* config, const char* name)
 {
+  size_t sets, ways, linesz;
+  parse_config_string(config, &sets, &ways, &linesz);
+
+  if (ways > 4 /* empirical */ && sets == 1)
+    return new fa_cache_sim_t(ways, linesz, name);
+  return new cache_sim_t(sets, ways, linesz, name);
+}
+
+void cache_sim_t::parse_config_string(const char* config, size_t *sets, size_t *ways, size_t *linesz)
+{
   const char* wp = strchr(config, ':');
   if (!wp++) help();
   const char* bp = strchr(wp, ':');
   if (!bp++) help();
 
-  size_t sets = atoi(std::string(config, wp).c_str());
-  size_t ways = atoi(std::string(wp, bp).c_str());
-  size_t linesz = atoi(bp);
-
-  if (ways > 4 /* empirical */ && sets == 1)
-    return new fa_cache_sim_t(ways, linesz, name);
-  return new cache_sim_t(sets, ways, linesz, name);
-  //TODO add partitioned cache to this.
+  *sets = atoi(std::string(config, wp).c_str());
+  *ways = atoi(std::string(wp, bp).c_str());
+  *linesz = atoi(bp);
 }
 
 void cache_sim_t::init()
@@ -157,30 +162,131 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store)
     *check_tag(addr) |= DIRTY;
 }
 
-remapping_table_t::remapping_table_t(size_t sets)
-{ //TODO fill in
-}
-
-partitioned_cache_sim_t::partitioned_cache_sim_t(size_t sets, size_t ways, size_t linesz, const char * name, slot_id_t num_of_slots) : cache_sim_t(sets, ways, linesz, name)
+void cache_sim_t::set_miss_handler(cache_sim_t* mh)
 {
-  max_enclaves = num_of_slots;
-  rmts = new remapping_table_t* [num_of_slots];
+  if (miss_handler) {
+    fprintf(stderr, "cache_sim_t ERROR: Attempting to set miss handler again.\n");
+    exit(-1);
+  }
+  miss_handler = mh;
 }
 
-slot_id_t partitioned_cache_sim_t::add_enclave(enclave_id_t id)
-{ //TODO fill in
+remapping_table_t::remapping_table_t(size_t _sets, size_t _ways, size_t _linesz, const char* _name, partitioned_cache_sim_t* _l2, enclave_id_t _id) :
+  cache_sim_t(_sets, _ways, _linesz, _name), llc(_l2), enclave_id(_id)
+{
+  llc_read_misses = 0;
+  llc_write_misses = 0;
+  slots = new size_t[sets*ways]();
 }
 
-void partitioned_cache_sim_t::access(uint64_t addr, size_t bytes, bool store, enclave_id_t id)
-{ //TODO fill in
+void remapping_table_t::access(uint64_t addr, size_t bytes, bool store)
+{
+
+    store ? write_accesses++ : read_accesses++;
+    (store ? bytes_written : bytes_read) += bytes;
+    size_t index;
+    uint64_t* hit_way = check_tag(addr, &index);
+    bool soft_miss = false;
+    if (likely(hit_way != NULL))
+    {
+      //This means we have had a hit in the RMT.
+      bool hit = llc->access(slots[index], addr, enclave_id);
+      if(!hit) { //This means a hit in RMT, but miss in LLC.
+        soft_miss = true;
+      } else {
+        if (store) {
+          *hit_way |= DIRTY;
+        }
+        return;
+      }
+    }
+
+    uint64_t victim;
+    if(soft_miss) {
+      store ? llc_write_misses++ : llc_read_misses++; //This keeps track of the LLC specific misses.
+      victim = victimize(addr, index);
+    } else {
+      //This means there was a miss in the RMT or a missin the LLC
+      store ? write_misses++ : read_misses++;
+
+      victim = victimize(addr);
+    }
+
+    if ((victim & (VALID | DIRTY)) == (VALID | DIRTY))
+    {
+      uint64_t dirty_addr = (victim & ~(VALID | DIRTY)) << idx_shift;
+      if (miss_handler)
+        miss_handler->access(dirty_addr, linesz, true);
+      writebacks++;
+    }
+
+    if (miss_handler)
+      miss_handler->access(addr & ~(linesz-1), linesz, false);
+
+    if (store)
+      *check_tag(addr, &index) |= DIRTY;
 }
 
-uint64_t* partitioned_cache_sim_t::check_tag(uint64_t addr, enclave_id_t id)
-{ //TODO fill in
+uint64_t* remapping_table_t::check_tag(uint64_t addr, size_t *index)
+{
+    size_t idx = (addr >> idx_shift) & (sets-1);
+    size_t tag = (addr >> idx_shift) | VALID;
+
+    for (size_t i = 0; i < ways; i++) {
+      if (tag == (tags[idx*ways + i] & ~DIRTY)) {
+        *index = idx*ways + i;
+        return &tags[idx*ways + i];
+      }
+    }
+
+    return NULL;
 }
 
-uint64_t partitioned_cache_sim_t::victimize(uint64_t addr)
-{ //TODO fill in
+uint64_t remapping_table_t::victimize(uint64_t addr)
+{
+    size_t idx = (addr >> idx_shift) & (sets-1);
+    size_t way = lfsr.next() % ways;
+    return victimize(addr, idx*ways + way);
+}
+
+uint64_t remapping_table_t::victimize(uint64_t addr, size_t index)
+{
+    uint64_t victim = tags[index];
+    tags[index] = (addr >> idx_shift) | VALID;
+    slots[index] = llc->victimize(addr, slots[index], enclave_id);
+    return victim;
+}
+
+partitioned_cache_sim_t::partitioned_cache_sim_t(size_t slots)
+{
+  cache_size = slots;
+  addresses = new uint64_t[slots]();
+  identifiers = new enclave_id_t[slots];
+  for (size_t i = 0; i < slots; i++) {
+    identifiers[i] = ENCLAVE_INVALID_ID;
+  }
+}
+
+bool partitioned_cache_sim_t::access(size_t slot, uint64_t addr, enclave_id_t id) //returns whether it hit.
+{
+  if(identifiers[slot] == ENCLAVE_INVALID_ID) {
+    return false;
+  }
+  if(addr == addresses[slot]) {
+    if(id == identifiers[slot]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+size_t partitioned_cache_sim_t::victimize(uint64_t addr, size_t slot, enclave_id_t id) //Returns new random slot to replace.
+{
+  identifiers[slot] = ENCLAVE_INVALID_ID;
+  size_t random_slot = rand() * cache_size;
+  addresses[random_slot] = addr;
+  identifiers[random_slot] = id;
+  return random_slot;
 }
 
 fa_cache_sim_t::fa_cache_sim_t(size_t ways, size_t linesz, const char* name)
