@@ -33,7 +33,7 @@ class cache_sim_t
   cache_sim_t(const cache_sim_t& rhs);
   virtual ~cache_sim_t();
 
-  void access(uint64_t addr, size_t bytes, bool store);
+  virtual void access(uint64_t addr, size_t bytes, bool store);
   void print_stats();
   void set_miss_handler(cache_sim_t* mh);
 
@@ -92,7 +92,7 @@ class remapping_table_t : public cache_sim_t
   public:
     remapping_table_t(size_t sets, size_t ways, size_t linesz, const char* name, partitioned_cache_sim_t* l2, enclave_id_t id); //Assuming direct mapped for now (way = 1)
     void print_stats();
-    void access(uint64_t addr, size_t bytes, bool store);
+    virtual void access(uint64_t addr, size_t bytes, bool store);
   private:
     partitioned_cache_sim_t *llc;
     enclave_id_t enclave_id;

@@ -35,6 +35,7 @@ void sim_t::request_halt(uint32_t id) {
     if(ics[i] || dcs[i]) fprintf(stderr, "\nCache stats for enclave %lu:\n", i);
     if(ics[i]) ics[i]->print_stats();
     if(dcs[i]) dcs[i]->print_stats();
+    if(rmts[i]) rmts[i]->print_stats();
   }
   fprintf(stderr, "\nShared Cache:\n");
   if(l2 != NULL) l2->print_stats();
@@ -45,11 +46,11 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
              std::vector<std::pair<reg_t, mem_t*>> mems,
              const std::vector<std::string>& args,
              std::vector<int> const hartids, unsigned progsize,
-             unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, cache_sim_t *l2)
+             unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, cache_sim_t *l2, remapping_table_t **rmts)
   : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), nenclaves(nenclaves),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
-    debug_module(this, progsize, max_bus_master_bits, require_authentication), ics(ics), dcs(dcs), l2(l2)
+    debug_module(this, progsize, max_bus_master_bits, require_authentication), ics(ics), dcs(dcs), l2(l2), rmts(rmts)
 {
   signal(SIGINT, &handle_signal);
 
@@ -125,6 +126,7 @@ void sim_t::step(size_t n)
   {
     steps = std::min(n - i, INTERLEAVE - current_step);
     if (current_proc < procs.size()) {
+      //fprintf(stderr, "sim.cc: taking step for proc %lu.\n", current_proc);
       procs[current_proc]->step(steps);
     }
 

@@ -201,7 +201,7 @@ int main(int argc, char** argv)
 
 
   sim_t s(isa, nprocs + nenclaves, nenclaves, halted, start_pc, mems, htif_args, std::move(hartids),
-      progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2);
+      progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2, rmts_arg);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(new jtag_dtm_t(&s.debug_module));
   if (use_rbb) {
@@ -243,7 +243,7 @@ int main(int argc, char** argv)
         ics[i+1]->set_miss_handler(&*l2);
       }
       if(partitioned_l2) {
-        ics[i+1]->set_miss_handler(rmts_arg[i+1]);
+        ics[i+1]->set_miss_handler(&*rmts[i+1]);
       }
     }
     if (dc_string) {
@@ -252,7 +252,7 @@ int main(int argc, char** argv)
         dcs[i+1]->set_miss_handler(&*l2);
       }
       if(partitioned_l2) {
-        dcs[i+1]->set_miss_handler(rmts_arg[i+1]);
+        dcs[i+1]->set_miss_handler(&*rmts[i+1]);
       }
     }
     if (extension) s.get_core(core_id)->register_extension(extension());
@@ -261,5 +261,6 @@ int main(int argc, char** argv)
   s.set_debug(debug);
   s.set_log(log);
   s.set_histogram(histogram);
+  fprintf(stderr, "spike.cc: starting simulation.\n");
   return s.run();
 }
