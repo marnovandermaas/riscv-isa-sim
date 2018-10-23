@@ -63,11 +63,11 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
 
   if (hartids.size() == 0) {
     for (size_t i = 0; i < procs.size() - nenclaves; i++) {
-      procs[i] = new processor_t(isa, this, i, halted);
+      procs[i] = new processor_t(isa, this, i, 0, halted);
     }
     enclave_id_t current_id = 1;
     for (size_t i = procs.size() - nenclaves; i < procs.size(); i++) {
-      procs[i] = new enclave_t(isa, this, i, current_id++, halted);
+      procs[i] = new processor_t(isa, this, i, current_id++, halted);
     }
   }
   else {
@@ -117,6 +117,7 @@ int sim_t::run()
 {
   host = context_t::current();
   target.init(sim_thread_main, this);
+  fprintf(stderr, "sim.cc: running htif.\n");
   return htif_t::run();
 }
 
@@ -126,7 +127,6 @@ void sim_t::step(size_t n)
   {
     steps = std::min(n - i, INTERLEAVE - current_step);
     if (current_proc < procs.size()) {
-      //fprintf(stderr, "sim.cc: taking step for proc %lu.\n", current_proc);
       procs[current_proc]->step(steps);
     }
 
@@ -229,6 +229,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
 
 void sim_t::reset()
 {
+  fprintf(stderr, "sim.cc: resetting.\n");
   if (dtb_enabled)
     make_dtb();
 }
@@ -240,6 +241,7 @@ void sim_t::idle()
 
 void sim_t::read_chunk(addr_t taddr, size_t len, void* dst)
 {
+  fprintf(stderr, "sim.cc: reading chunk.\n");
   assert(len == 8);
   auto data = debug_mmu->load_uint64(taddr);
   memcpy(dst, &data, sizeof data);
@@ -247,13 +249,16 @@ void sim_t::read_chunk(addr_t taddr, size_t len, void* dst)
 
 void sim_t::write_chunk(addr_t taddr, size_t len, const void* src)
 {
+  fprintf(stderr, "sim.cc: writing chunk.\n");
   assert(len == 8);
   uint64_t data;
   memcpy(&data, src, sizeof data);
+  fprintf(stderr, "sim.cc: starting store_uint64 of target addres %lu, length %lu.\n", taddr, len);
   debug_mmu->store_uint64(taddr, data);
 }
 
 void sim_t::proc_reset(unsigned id)
 {
+  fprintf(stderr, "sim.cc: processor reset.\n");
   debug_module.proc_reset(id);
 }

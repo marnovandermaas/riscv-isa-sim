@@ -70,6 +70,7 @@ public:
 
   inline void misaligned_store(reg_t addr, reg_t data, size_t size)
   {
+    fprintf(stderr, "mem.h: misaligned_store.\n");
 #ifdef RISCV_ENABLE_MISALIGNED
     for (size_t i = 0; i < size; i++)
       store_uint8(addr + i, data >> (i * 8));
@@ -78,25 +79,38 @@ public:
 #endif
   }
 
+  /* // template for functions that load an aligned value from memory
+  // #define load_func(type) \
+  //   inline type##_t load_##type(reg_t addr) { \
+  //     if (unlikely(addr & (sizeof(type##_t)-1))) \
+  //       return misaligned_load(addr, sizeof(type##_t)); \
+  //     reg_t vpn = addr >> PGSHIFT; \
+  //     if (likely(tlb_load_tag[vpn % TLB_ENTRIES] == vpn)) \
+  //       return *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
+  //     if (unlikely(tlb_load_tag[vpn % TLB_ENTRIES] == (vpn | TLB_CHECK_TRIGGERS))) { \
+  //       type##_t data = *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
+  //       if (!matched_trigger) { \
+  //         matched_trigger = trigger_exception(OPERATION_LOAD, addr, data); \
+  //         if (matched_trigger) \
+  //           throw *matched_trigger; \
+  //       } \
+  //       return data; \
+  //     } \
+  //     type##_t res; \
+  //     load_slow_path(addr, sizeof(type##_t), (uint8_t*)&res); \
+  //     return res; \
+  //   } */
   // template for functions that load an aligned value from memory
   #define load_func(type) \
     inline type##_t load_##type(reg_t addr) { \
       if (unlikely(addr & (sizeof(type##_t)-1))) \
         return misaligned_load(addr, sizeof(type##_t)); \
-      reg_t vpn = addr >> PGSHIFT; \
-      if (likely(tlb_load_tag[vpn % TLB_ENTRIES] == vpn)) \
-        return *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
-      if (unlikely(tlb_load_tag[vpn % TLB_ENTRIES] == (vpn | TLB_CHECK_TRIGGERS))) { \
-        type##_t data = *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
-        if (!matched_trigger) { \
-          matched_trigger = trigger_exception(OPERATION_LOAD, addr, data); \
-          if (matched_trigger) \
-            throw *matched_trigger; \
-        } \
-        return data; \
-      } \
       type##_t res; \
-      load_slow_path(addr, sizeof(type##_t), (uint8_t*)&res); \
+      enclave_id_t id = 0; \
+      if(proc != NULL) { \
+        proc->get_enclave_id(); \
+      } \
+      load_slow_path(addr, sizeof(type##_t), (uint8_t*)&res, id); \
       return res; \
     }
 
@@ -112,30 +126,44 @@ public:
   load_func(int32)
   load_func(int64)
 
+  /* // template for functions that store an aligned value to memory
+  // #define store_func(type) \
+  //   void store_##type(reg_t addr, type##_t val) { \
+  //     if (unlikely(addr & (sizeof(type##_t)-1))) \
+  //       return misaligned_store(addr, val, sizeof(type##_t)); \
+  //     reg_t vpn = addr >> PGSHIFT; \
+  //     if (likely(tlb_store_tag[vpn % TLB_ENTRIES] == vpn)) \
+  //       *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = val; \
+  //     else if (unlikely(tlb_store_tag[vpn % TLB_ENTRIES] == (vpn | TLB_CHECK_TRIGGERS))) { \
+  //       if (!matched_trigger) { \
+  //         matched_trigger = trigger_exception(OPERATION_STORE, addr, val); \
+  //         if (matched_trigger) \
+  //           throw *matched_trigger; \
+  //       } \
+  //       *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = val; \
+  //     } \
+  //     else \
+  //       store_slow_path(addr, sizeof(type##_t), (const uint8_t*)&val); \
+  //   } */
+
   // template for functions that store an aligned value to memory
   #define store_func(type) \
     void store_##type(reg_t addr, type##_t val) { \
       if (unlikely(addr & (sizeof(type##_t)-1))) \
         return misaligned_store(addr, val, sizeof(type##_t)); \
-      reg_t vpn = addr >> PGSHIFT; \
-      if (likely(tlb_store_tag[vpn % TLB_ENTRIES] == vpn)) \
-        *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = val; \
-      else if (unlikely(tlb_store_tag[vpn % TLB_ENTRIES] == (vpn | TLB_CHECK_TRIGGERS))) { \
-        if (!matched_trigger) { \
-          matched_trigger = trigger_exception(OPERATION_STORE, addr, val); \
-          if (matched_trigger) \
-            throw *matched_trigger; \
-        } \
-        *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = val; \
+      enclave_id_t id = 0; \
+      if(proc != NULL) { \
+        id = proc->get_enclave_id(); \
       } \
-      else \
-        store_slow_path(addr, sizeof(type##_t), (const uint8_t*)&val); \
+      store_slow_path(addr, sizeof(type##_t), (const uint8_t*)&val, id); \
     }
 
   // template for functions that perform an atomic memory operation
+  //TODO adjust for enclave identifiers
   #define amo_func(type) \
     template<typename op> \
     type##_t amo_##type(reg_t addr, op f) { \
+      throw trap_store_access_fault(-1); \
       if (addr & (sizeof(type##_t)-1)) \
         throw trap_store_address_misaligned(addr); \
       try { \
@@ -290,6 +318,7 @@ private:
   // implement an instruction cache for simulator performance
   icache_entry_t icache[ICACHE_ENTRIES];
 
+  bool check_identifier(reg_t paddr, enclave_id_t id);
   // implement a TLB for simulator performance
   static const reg_t TLB_ENTRIES = 256;
   // If a TLB tag has TLB_CHECK_TRIGGERS set, then the MMU must check for a
@@ -309,8 +338,8 @@ private:
 
   // handle uncommon cases: TLB misses, page faults, MMIO
   tlb_entry_t fetch_slow_path(reg_t addr);
-  void load_slow_path(reg_t addr, reg_t len, uint8_t* bytes);
-  void store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes);
+  void load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t id);
+  void store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave_id_t id);
   reg_t translate(reg_t addr, access_type type);
 
   // ITLB lookup

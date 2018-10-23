@@ -20,10 +20,11 @@
 #define STATE state
 
 processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
-        bool halt_on_reset)
+        enclave_id_t e_id, bool halt_on_reset)
   : debug(false), halt_request(false), sim(sim), ext(NULL), id(id),
   halt_on_reset(halt_on_reset), last_pc(1), executions(1)
 {
+  enclave_id = e_id;
   parse_isa_string(isa);
   register_base_instructions();
 
@@ -837,16 +838,4 @@ void processor_t::trigger_updated()
       mmu->check_triggers_store = true;
     }
   }
-}
-
-enclave_t::enclave_t(const char* isa, simif_t* sim, uint32_t id,
-        enclave_id_t e_id, bool halt_on_reset)
-  : processor_t(isa, sim, id, halt_on_reset)
-{
-  enclave_id = e_id;
-  //fprintf(stderr, "Created enclave %lu and set halt_request to %d and halt_on_reset set to %d\n", enclave_id, halt_request, halt_on_reset);
-}
-
-enclave_t::~enclave_t()
-{
 }

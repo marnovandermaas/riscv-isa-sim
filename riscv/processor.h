@@ -163,9 +163,10 @@ static int cto(reg_t val)
 class processor_t : public abstract_device_t
 {
 public:
-  processor_t(const char* isa, simif_t* sim, uint32_t id, bool halt_on_reset=false);
+  processor_t(const char* isa, simif_t* sim, uint32_t id, enclave_id_t e_id, bool halt_on_reset=false);
   ~processor_t();
 
+  enclave_id_t get_enclave_id() {return enclave_id;};
   void set_debug(bool value);
   void set_histogram(bool value);
   void reset();
@@ -308,6 +309,7 @@ private:
   std::string isa_string;
   bool histogram_enabled;
   bool halt_on_reset;
+  enclave_id_t enclave_id;
 
   std::vector<insn_desc_t> instructions;
   std::map<reg_t,uint64_t> pc_histogram;
@@ -334,15 +336,6 @@ private:
 
   // Track repeated executions for processor_t::disasm()
   uint64_t last_pc, last_bits, executions;
-};
-
-class enclave_t : public processor_t
-{ //TODO fill in.
-public:
-  explicit enclave_t(const char* isa, simif_t* sim, uint32_t id, enclave_id_t e_id, bool halt_on_reset=false);
-  ~enclave_t();
-private:
-  enclave_id_t enclave_id;
 };
 
 reg_t illegal_instruction(processor_t* p, insn_t insn, reg_t pc);

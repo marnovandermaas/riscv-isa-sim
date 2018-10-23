@@ -48,6 +48,8 @@ public:
   void proc_reset(unsigned id);
 
 private:
+  //TODO initialize
+  enclave_id_t memory_tags[32768]; //1GB worth of tags for 4kB pages: 2^30/(4*8*2^10) = 2^15 = 32768
   std::vector<std::pair<reg_t, mem_t*>> mems;
   mmu_t* debug_mmu;  // debug port into main memory
   std::vector<processor_t*> procs;

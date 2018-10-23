@@ -88,16 +88,28 @@ reg_t reg_from_bytes(size_t len, const uint8_t* bytes)
   abort();
 }
 
-void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes)
+bool mmu_t::check_identifier(reg_t paddr, enclave_id_t id) {
+  //TODO implement for real.
+  //You need to check that sim->memory_tags[<something derived form paddr>] == id
+  return true;
+}
+
+void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t id)
 {
   reg_t paddr = translate(addr, LOAD);
-
+  fprintf(stderr, "mmu.cc: load_slow_path\n");
   if (auto host_addr = sim->addr_to_mem(paddr)) {
-    memcpy(bytes, host_addr, len);
-    if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD))
-      tracer.trace(paddr, len, LOAD);
-    else
-      refill_tlb(addr, paddr, host_addr, LOAD);
+    if(check_identifier(paddr, id)) {
+      memcpy(bytes, host_addr, len);
+      if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD))
+        tracer.trace(paddr, len, LOAD); //TODO should tracer trace any unauthorized loads?
+      else
+        refill_tlb(addr, paddr, host_addr, LOAD);
+    } else {
+      for (reg_t i = 0; i < len; i++) {
+        bytes[i] = 0xFF;
+      }
+    }
   } else if (!sim->mmio_load(paddr, len, bytes)) {
     throw trap_load_access_fault(addr);
   }
@@ -110,10 +122,10 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes)
   }
 }
 
-void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes)
+void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave_id_t id)
 {
+  fprintf(stderr, "mmu.cc: store_slow_path\n");
   reg_t paddr = translate(addr, STORE);
-
   if (!matched_trigger) {
     reg_t data = reg_from_bytes(len, bytes);
     matched_trigger = trigger_exception(OPERATION_STORE, addr, data);
@@ -122,11 +134,13 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes)
   }
 
   if (auto host_addr = sim->addr_to_mem(paddr)) {
-    memcpy(host_addr, bytes, len);
-    if (tracer.interested_in_range(paddr, paddr + PGSIZE, STORE))
-      tracer.trace(paddr, len, STORE);
-    else
-      refill_tlb(addr, paddr, host_addr, STORE);
+    if(check_identifier(paddr, id)) {
+      memcpy(host_addr, bytes, len);
+      if (tracer.interested_in_range(paddr, paddr + PGSIZE, STORE))
+        tracer.trace(paddr, len, STORE); //TODO should tracer know about an unauthorized store?
+      else
+        refill_tlb(addr, paddr, host_addr, STORE);
+    }
   } else if (!sim->mmio_store(paddr, len, bytes)) {
     throw trap_store_access_fault(addr);
   }
