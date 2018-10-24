@@ -37,8 +37,10 @@ void sim_t::request_halt(uint32_t id) {
     if(dcs[i]) dcs[i]->print_stats();
     if(rmts[i]) rmts[i]->print_stats();
   }
-  fprintf(stderr, "\nShared Cache:\n");
-  if(l2 != NULL) l2->print_stats();
+  if(l2 != NULL) {
+    fprintf(stderr, "\nShared Cache:\n");
+    l2->print_stats();
+  }
   exit(0);
 }
 
@@ -249,11 +251,9 @@ void sim_t::read_chunk(addr_t taddr, size_t len, void* dst)
 
 void sim_t::write_chunk(addr_t taddr, size_t len, const void* src)
 {
-  fprintf(stderr, "sim.cc: writing chunk.\n");
   assert(len == 8);
   uint64_t data;
   memcpy(&data, src, sizeof data);
-  fprintf(stderr, "sim.cc: starting store_uint64 of target addres %lu, length %lu.\n", taddr, len);
   debug_mmu->store_uint64(taddr, data);
 }
 

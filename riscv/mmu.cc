@@ -97,7 +97,6 @@ bool mmu_t::check_identifier(reg_t paddr, enclave_id_t id) {
 void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t id)
 {
   reg_t paddr = translate(addr, LOAD);
-  fprintf(stderr, "mmu.cc: load_slow_path\n");
   if (auto host_addr = sim->addr_to_mem(paddr)) {
     if(check_identifier(paddr, id)) {
       memcpy(bytes, host_addr, len);
@@ -124,7 +123,6 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t i
 
 void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave_id_t id)
 {
-  fprintf(stderr, "mmu.cc: store_slow_path\n");
   reg_t paddr = translate(addr, STORE);
   if (!matched_trigger) {
     reg_t data = reg_from_bytes(len, bytes);
