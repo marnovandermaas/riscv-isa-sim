@@ -45,7 +45,7 @@ static void help()
   exit(1);
 }
 
-static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg)
+static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *num_of_pages)
 {
   // handle legacy mem argument
   char* p;
@@ -54,9 +54,13 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg)
     reg_t size = reg_t(mb) << 20;
     if (size != (size_t)size)
       throw std::runtime_error("Size would overflow size_t");
+    *num_of_pages = size / PGSIZE;
+    if ((size % PGSIZE) != 0) *num_of_pages++;
     return std::vector<std::pair<reg_t, mem_t*>>(1, std::make_pair(reg_t(DRAM_BASE), new mem_t(size)));
   }
-
+  
+  fprintf(stderr, "spike.cc: ERROR currently preasidio does not support multiple mapped working memories.\n");
+  exit(-1);
   // handle base/size tuples
   std::vector<std::pair<reg_t, mem_t*>> res;
   while (true) {
@@ -101,6 +105,7 @@ int main(int argc, char** argv)
   unsigned progsize = 2;
   unsigned max_bus_master_bits = 0;
   bool require_authentication = false;
+  reg_t num_of_pages = 0;
   std::vector<int> hartids;
 
   auto const hartids_parser = [&](const char *s) {
@@ -122,7 +127,7 @@ int main(int argc, char** argv)
   parser.option('g', 0, 0, [&](const char* s){histogram = true;});
   parser.option('l', 0, 0, [&](const char* s){log = true;});
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
-  parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s);});
+  parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s, &num_of_pages);});
   // I wanted to use --halted, but for some reason that doesn't work.
   parser.option('H', 0, 0, [&](const char* s){halted = true;});
   parser.option(0, "rbb-port", 1, [&](const char* s){use_rbb = true; rbb_port = atoi(s);});
@@ -152,7 +157,7 @@ int main(int argc, char** argv)
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
   if (mems.empty())
-    mems = make_mems("2048");
+    mems = make_mems("2048", &num_of_pages);
 
   if (!*argv1)
     help();
@@ -201,7 +206,7 @@ int main(int argc, char** argv)
 
 
   sim_t s(isa, nprocs + nenclaves, nenclaves, halted, start_pc, mems, htif_args, std::move(hartids),
-      progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2, rmts_arg);
+      progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2, rmts_arg, num_of_pages);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(new jtag_dtm_t(&s.debug_module));
   if (use_rbb) {

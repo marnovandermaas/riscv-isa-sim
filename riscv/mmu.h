@@ -52,8 +52,10 @@ class trigger_matched_t
 // an MMU and instruction cache are maintained for simulator performance.
 class mmu_t
 {
+private:
+  bool check_identifier(reg_t paddr, enclave_id_t id);
 public:
-  mmu_t(simif_t* sim, processor_t* proc);
+  mmu_t(simif_t* sim, processor_t* proc, enclave_id_t *page_owners);
   ~mmu_t();
 
   inline reg_t misaligned_load(reg_t addr, size_t size)
@@ -106,7 +108,7 @@ public:
       if (unlikely(addr & (sizeof(type##_t)-1))) \
         return misaligned_load(addr, sizeof(type##_t)); \
       type##_t res; \
-      enclave_id_t id = 0; \
+      enclave_id_t id = ENCLAVE_DEFAULT_ID; \
       if(proc != NULL) { \
         proc->get_enclave_id(); \
       } \
@@ -151,7 +153,7 @@ public:
     void store_##type(reg_t addr, type##_t val) { \
       if (unlikely(addr & (sizeof(type##_t)-1))) \
         return misaligned_store(addr, val, sizeof(type##_t)); \
-      enclave_id_t id = 0; \
+      enclave_id_t id = ENCLAVE_DEFAULT_ID; \
       if(proc != NULL) { \
         id = proc->get_enclave_id(); \
       } \
@@ -238,9 +240,13 @@ public:
     return (addr / PC_ALIGN) % ICACHE_ENTRIES;
   }
 
-  inline icache_entry_t* refill_icache(reg_t addr, icache_entry_t* entry)
+  inline icache_entry_t* refill_icache(reg_t addr, icache_entry_t* entry, enclave_id_t id)
   {
     auto tlb_entry = translate_insn_addr(addr);
+    reg_t paddr = tlb_entry.target_offset + addr;
+    if(!check_identifier(paddr, id)) {
+      return NULL;
+    }
     insn_bits_t insn = *(uint16_t*)(tlb_entry.host_offset + addr);
     int length = insn_length(insn);
 
@@ -263,7 +269,6 @@ public:
     entry->next = &icache[icache_index(addr + length)];
     entry->data = fetch;
 
-    reg_t paddr = tlb_entry.target_offset + addr;;
     if (tracer.interested_in_range(paddr, paddr + 1, FETCH)) {
       entry->tag = -1;
       tracer.trace(paddr, length, FETCH);
@@ -271,18 +276,21 @@ public:
     return entry;
   }
 
-  inline icache_entry_t* access_icache(reg_t addr)
+  inline icache_entry_t* access_icache(reg_t addr, enclave_id_t id)
   {
     icache_entry_t* entry = &icache[icache_index(addr)];
     if (likely(entry->tag == addr))
       return entry;
-    return refill_icache(addr, entry);
+    return refill_icache(addr, entry, id);
   }
 
-  inline insn_fetch_t load_insn(reg_t addr)
+  inline insn_fetch_t load_insn(reg_t addr, enclave_id_t id)
   {
     icache_entry_t entry;
-    return refill_icache(addr, &entry)->data;
+    if(refill_icache(addr, &entry, id)) {
+      return entry.data;
+    }
+    throw trap_illegal_instruction(0);
   }
 
   void flush_tlb();
@@ -314,11 +322,11 @@ private:
   memtracer_list_t tracer;
   reg_t load_reservation_address;
   uint16_t fetch_temp;
+  enclave_id_t *page_owners;
 
   // implement an instruction cache for simulator performance
   icache_entry_t icache[ICACHE_ENTRIES];
 
-  bool check_identifier(reg_t paddr, enclave_id_t id);
   // implement a TLB for simulator performance
   static const reg_t TLB_ENTRIES = 256;
   // If a TLB tag has TLB_CHECK_TRIGGERS set, then the MMU must check for a

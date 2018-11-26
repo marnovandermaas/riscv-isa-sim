@@ -48,7 +48,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
              std::vector<std::pair<reg_t, mem_t*>> mems,
              const std::vector<std::string>& args,
              std::vector<int> const hartids, unsigned progsize,
-             unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, cache_sim_t *l2, remapping_table_t **rmts)
+             unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, cache_sim_t *l2, remapping_table_t **rmts, reg_t num_of_pages)
   : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), nenclaves(nenclaves),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
@@ -56,20 +56,25 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
 {
   signal(SIGINT, &handle_signal);
 
+  enclave_id_t *page_owners = new enclave_id_t[num_of_pages];
+  for(reg_t i = 0; i < num_of_pages; i++) {
+    page_owners[i] = ENCLAVE_DEFAULT_ID;
+  }
+
   for (auto& x : mems)
     bus.add_device(x.first, x.second);
 
   debug_module.add_device(&bus);
 
-  debug_mmu = new mmu_t(this, NULL);
+  debug_mmu = new mmu_t(this, NULL, page_owners);
 
   if (hartids.size() == 0) {
     for (size_t i = 0; i < procs.size() - nenclaves; i++) {
-      procs[i] = new processor_t(isa, this, i, 0, halted);
-    }
+      procs[i] = new processor_t(isa, this, i, ENCLAVE_DEFAULT_ID, page_owners, halted);
+    } 
     enclave_id_t current_id = 1;
     for (size_t i = procs.size() - nenclaves; i < procs.size(); i++) {
-      procs[i] = new processor_t(isa, this, i, current_id++, halted);
+      procs[i] = new processor_t(isa, this, i, current_id++, page_owners, halted);
     }
   }
   else {
@@ -78,7 +83,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
       exit(1);
     }
     for (size_t i = 0; i < procs.size(); i++) {
-      procs[i] = new processor_t(isa, this, hartids[i], halted);
+      procs[i] = new processor_t(isa, this, ENCLAVE_DEFAULT_ID, hartids[i], page_owners, halted);
     }
   }
 

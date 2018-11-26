@@ -141,7 +141,7 @@ void processor_t::step(size_t n)
             state.single_step = state.STEP_STEPPED;
           }
           //fprintf(stderr, "execute.cc: loading instruction.\n");
-          insn_fetch_t fetch = mmu->load_insn(pc);
+          insn_fetch_t fetch = mmu->load_insn(pc, enclave_id);
           if (debug && !state.serialized)
             disasm(fetch.insn);
           //fprintf(stderr, "execute.cc: starting execute.\n");
@@ -180,7 +180,10 @@ void processor_t::step(size_t n)
         // does not have the current pc cached, it will refill the MMU and
         // return the correct entry. ic_entry->data.func is the C++ function
         // corresponding to the instruction.
-        auto ic_entry = _mmu->access_icache(pc);
+        auto ic_entry = _mmu->access_icache(pc, enclave_id);
+        if(ic_entry == NULL) {
+          throw trap_illegal_instruction(0); 
+        }
 
         // This macro is included in "icache.h" included within the switch
         // statement below. The indirect jump corresponding to the instruction
@@ -208,7 +211,6 @@ void processor_t::step(size_t n)
     }
     catch(trap_t& t)
     {
-      fprintf(stderr, "execute.cc: taking trap %s.\n", t.name());
       take_trap(t, pc);
       n = instret;
 
@@ -225,7 +227,7 @@ void processor_t::step(size_t n)
         // an exception because matched_trigger is already set. (All memory
         // instructions are idempotent so restarting is safe.)
 
-        insn_fetch_t fetch = mmu->load_insn(pc);
+        insn_fetch_t fetch = mmu->load_insn(pc, enclave_id);
         pc = execute_insn(this, pc, fetch);
         advance_pc();
 

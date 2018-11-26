@@ -4,8 +4,8 @@
 #include "simif.h"
 #include "processor.h"
 
-mmu_t::mmu_t(simif_t* sim, processor_t* proc)
- : sim(sim), proc(proc),
+mmu_t::mmu_t(simif_t* sim, processor_t* proc, enclave_id_t *page_owners)
+ : sim(sim), proc(proc), page_owners(page_owners),
   check_triggers_fetch(false),
   check_triggers_load(false),
   check_triggers_store(false),
@@ -91,6 +91,11 @@ reg_t reg_from_bytes(size_t len, const uint8_t* bytes)
 bool mmu_t::check_identifier(reg_t paddr, enclave_id_t id) {
   //TODO implement for real.
   //You need to check that sim->memory_tags[<something derived form paddr>] == id
+  if(paddr >= DRAM_BASE) {
+    reg_t dram_offset = paddr - DRAM_BASE;
+    reg_t page_num = dram_offset / PGSIZE;
+    return id == page_owners[page_num];
+  }
   return true;
 }
 

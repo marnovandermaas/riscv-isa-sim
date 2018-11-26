@@ -24,7 +24,7 @@ public:
   sim_t(const char* isa, size_t _nprocs, size_t _nenclaves,  bool halted, reg_t start_pc,
         std::vector<std::pair<reg_t, mem_t*>> mems,
         const std::vector<std::string>& args, const std::vector<int> hartids,
-        unsigned progsize, unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, cache_sim_t *l2, remapping_table_t **rmts);
+        unsigned progsize, unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, cache_sim_t *l2, remapping_table_t **rmts, reg_t num_of_pages);
   ~sim_t();
 
   // run the simulation to completion
