@@ -58,7 +58,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
     if ((size % PGSIZE) != 0) *num_of_pages++;
     return std::vector<std::pair<reg_t, mem_t*>>(1, std::make_pair(reg_t(DRAM_BASE), new mem_t(size)));
   }
-  
+
   fprintf(stderr, "spike.cc: ERROR currently preasidio does not support multiple mapped working memories.\n");
   exit(-1);
   // handle base/size tuples

@@ -116,6 +116,9 @@ void processor_t::step(size_t n)
        pc = state.pc; \
        break; \
      } else { \
+       if(pc == DRAM_BASE && enclave_id != 0) { \
+         pc = DRAM_BASE + enclave_id*PGSIZE; \
+       } \
        state.pc = pc; \
        instret++; \
      }

@@ -4,6 +4,7 @@
 #include "mmu.h"
 #include "dts.h"
 #include "remote_bitbang.h"
+#include "encoding.h"
 #include <map>
 #include <iostream>
 #include <sstream>
@@ -56,7 +57,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
 {
   signal(SIGINT, &handle_signal);
 
-  enclave_id_t *page_owners = new enclave_id_t[num_of_pages];
+  page_owners = new enclave_id_t[num_of_pages];
   for(reg_t i = 0; i < num_of_pages; i++) {
     page_owners[i] = ENCLAVE_DEFAULT_ID;
   }
@@ -71,7 +72,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
   if (hartids.size() == 0) {
     for (size_t i = 0; i < procs.size() - nenclaves; i++) {
       procs[i] = new processor_t(isa, this, i, ENCLAVE_DEFAULT_ID, page_owners, halted);
-    } 
+    }
     enclave_id_t current_id = 1;
     for (size_t i = procs.size() - nenclaves; i < procs.size(); i++) {
       procs[i] = new processor_t(isa, this, i, current_id++, page_owners, halted);
@@ -96,6 +97,22 @@ sim_t::~sim_t()
   for (size_t i = 0; i < procs.size(); i++)
     delete procs[i];
   delete debug_mmu;
+}
+
+void sim_t::make_enclave_pages() {
+  addr_t base_addr = DRAM_BASE;
+  size_t len = 8;
+  char data[8];
+  for(addr_t addr = base_addr; addr < base_addr + PGSIZE; addr += len) {
+    read_chunk(addr, len, data);
+    printf("Address %10x with data 0x%02x %02x %02x %02x %02x %02x %02x %02x \n", addr, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
+    for (size_t i = 1; i <= nenclaves; i++) {
+      write_chunk(addr+i*PGSIZE, len, data);
+    }
+  }
+  for (size_t i = 1; i <= nenclaves; i++) {
+    page_owners[i] = i;
+  }
 }
 
 void sim_thread_main(void* arg)
@@ -237,6 +254,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
 void sim_t::reset()
 {
   fprintf(stderr, "sim.cc: resetting.\n");
+  make_enclave_pages();
   if (dtb_enabled)
     make_dtb();
 }
@@ -248,7 +266,6 @@ void sim_t::idle()
 
 void sim_t::read_chunk(addr_t taddr, size_t len, void* dst)
 {
-  fprintf(stderr, "sim.cc: reading chunk.\n");
   assert(len == 8);
   auto data = debug_mmu->load_uint64(taddr);
   memcpy(dst, &data, sizeof data);
