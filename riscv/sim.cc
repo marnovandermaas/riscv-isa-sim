@@ -67,15 +67,15 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
 
   debug_module.add_device(&bus);
 
-  debug_mmu = new mmu_t(this, NULL, page_owners);
+  debug_mmu = new mmu_t(this, NULL, page_owners, num_of_pages);
 
   if (hartids.size() == 0) {
     for (size_t i = 0; i < procs.size() - nenclaves; i++) {
-      procs[i] = new processor_t(isa, this, i, ENCLAVE_DEFAULT_ID, page_owners, halted);
+      procs[i] = new processor_t(isa, this, i, ENCLAVE_DEFAULT_ID, page_owners, num_of_pages, halted);
     }
     enclave_id_t current_id = 1;
     for (size_t i = procs.size() - nenclaves; i < procs.size(); i++) {
-      procs[i] = new processor_t(isa, this, i, current_id++, page_owners, halted);
+      procs[i] = new processor_t(isa, this, i, current_id++, page_owners, num_of_pages, halted);
     }
   }
   else {
@@ -84,7 +84,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
       exit(1);
     }
     for (size_t i = 0; i < procs.size(); i++) {
-      procs[i] = new processor_t(isa, this, ENCLAVE_DEFAULT_ID, hartids[i], page_owners, halted);
+      procs[i] = new processor_t(isa, this, ENCLAVE_DEFAULT_ID, hartids[i], page_owners, num_of_pages, halted);
     }
   }
 
@@ -105,13 +105,19 @@ void sim_t::make_enclave_pages() {
   char data[8];
   for(addr_t addr = base_addr; addr < base_addr + PGSIZE; addr += len) {
     read_chunk(addr, len, data);
-    printf("Address %10x with data 0x%02x %02x %02x %02x %02x %02x %02x %02x \n", addr, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
+    //printf("Address %10x with data 0x%02x %02x %02x %02x %02x %02x %02x %02x \n", addr, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
     for (size_t i = 1; i <= nenclaves; i++) {
-      write_chunk(addr+i*PGSIZE, len, data);
+      write_chunk(addr+i*NUM_OF_ENCLAVE_PAGES*PGSIZE, len, data);
     }
   }
   for (size_t i = 1; i <= nenclaves; i++) {
-    page_owners[i] = i;
+    for (size_t j = 0; j < NUM_OF_ENCLAVE_PAGES; j++) {
+      size_t code_page = NUM_OF_ENCLAVE_PAGES*i + j;
+      size_t stack_page = STACK_PAGE_OFFSET*(procs.size() + i - 1) + NUM_OF_ENCLAVE_PAGES*(i+1) + j; 
+      page_owners[code_page] = i; //code/data pages
+      page_owners[stack_page] = i; //stack pages
+      fprintf(stderr, "Setting page %d and %d to enclave %d.\n", code_page, stack_page, i);
+    }
   }
 }
 

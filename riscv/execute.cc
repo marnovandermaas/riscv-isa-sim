@@ -2,6 +2,7 @@
 
 #include "processor.h"
 #include "mmu.h"
+#include "sim.h"
 #include <cassert>
 
 
@@ -117,7 +118,7 @@ void processor_t::step(size_t n)
        break; \
      } else { \
        if(pc == DRAM_BASE && enclave_id != 0) { \
-         pc = DRAM_BASE + enclave_id*PGSIZE; \
+         pc = DRAM_BASE + enclave_id*NUM_OF_ENCLAVE_PAGES*PGSIZE; \
        } \
        state.pc = pc; \
        instret++; \

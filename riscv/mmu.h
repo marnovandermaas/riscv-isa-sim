@@ -55,7 +55,7 @@ class mmu_t
 private:
   bool check_identifier(reg_t paddr, enclave_id_t id);
 public:
-  mmu_t(simif_t* sim, processor_t* proc, enclave_id_t *page_owners);
+  mmu_t(simif_t* sim, processor_t* proc, enclave_id_t *page_owners, size_t num_pages);
   ~mmu_t();
 
   inline reg_t misaligned_load(reg_t addr, size_t size)
@@ -110,7 +110,7 @@ public:
       type##_t res; \
       enclave_id_t id = ENCLAVE_DEFAULT_ID; \
       if(proc != NULL) { \
-        proc->get_enclave_id(); \
+        id = proc->get_enclave_id(); \
       } \
       load_slow_path(addr, sizeof(type##_t), (uint8_t*)&res, id); \
       return res; \
@@ -323,6 +323,7 @@ private:
   reg_t load_reservation_address;
   uint16_t fetch_temp;
   enclave_id_t *page_owners;
+  size_t num_of_pages;
 
   // implement an instruction cache for simulator performance
   icache_entry_t icache[ICACHE_ENTRIES];

@@ -4,8 +4,8 @@
 #include "simif.h"
 #include "processor.h"
 
-mmu_t::mmu_t(simif_t* sim, processor_t* proc, enclave_id_t *page_owners)
- : sim(sim), proc(proc), page_owners(page_owners),
+mmu_t::mmu_t(simif_t* sim, processor_t* proc, enclave_id_t *page_owners, size_t num_of_pages)
+ : sim(sim), proc(proc), page_owners(page_owners), num_of_pages(num_of_pages),
   check_triggers_fetch(false),
   check_triggers_load(false),
   check_triggers_store(false),
@@ -89,9 +89,7 @@ reg_t reg_from_bytes(size_t len, const uint8_t* bytes)
 }
 
 bool mmu_t::check_identifier(reg_t paddr, enclave_id_t id) {
-  //TODO implement for real.
-  //You need to check that sim->memory_tags[<something derived form paddr>] == id
-  if(paddr >= DRAM_BASE) {
+  if(paddr >= DRAM_BASE && paddr < DRAM_BASE + PGSIZE*num_of_pages) {
     reg_t dram_offset = paddr - DRAM_BASE;
     reg_t page_num = dram_offset / PGSIZE;
     return id == page_owners[page_num];
@@ -110,6 +108,7 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t i
       else
         refill_tlb(addr, paddr, host_addr, LOAD);
     } else {
+      fprintf(stderr, "Denying load access to enclave %d, virtual address 0x%x, physical address 0x%x, number of pages %d, page size 0x%x\n", id, addr, paddr, num_of_pages, PGSIZE);
       for (reg_t i = 0; i < len; i++) {
         bytes[i] = 0xFF;
       }
@@ -143,6 +142,8 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
         tracer.trace(paddr, len, STORE); //TODO should tracer know about an unauthorized store?
       else
         refill_tlb(addr, paddr, host_addr, STORE);
+    } else {
+      fprintf(stderr, "Denying store access to enclave %d, virtual address 0x%x, physical address 0x%x, number of pages %d, page size 0x%x\n", id, addr, paddr, num_of_pages, PGSIZE);
     }
   } else if (!sim->mmio_store(paddr, len, bytes)) {
     throw trap_store_access_fault(addr);

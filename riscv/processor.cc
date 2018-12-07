@@ -20,7 +20,7 @@
 #define STATE state
 
 processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
-        enclave_id_t e_id, enclave_id_t *page_owners, bool halt_on_reset)
+        enclave_id_t e_id, enclave_id_t *page_owners, size_t num_of_pages, bool halt_on_reset)
   : debug(false), halt_request(false), sim(sim), ext(NULL), id(id),
   halt_on_reset(halt_on_reset), last_pc(1), executions(1)
 {
@@ -28,7 +28,7 @@ processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
   parse_isa_string(isa);
   register_base_instructions();
 
-  mmu = new mmu_t(sim, this, page_owners);
+  mmu = new mmu_t(sim, this, page_owners, num_of_pages);
 
   disassembler = new disassembler_t(max_xlen);
   if (ext)

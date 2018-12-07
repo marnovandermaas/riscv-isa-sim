@@ -14,6 +14,9 @@
 #include <string>
 #include <memory>
 
+#define NUM_OF_ENCLAVE_PAGES 2
+#define STACK_PAGE_OFFSET 4096
+
 class mmu_t;
 class remote_bitbang_t;
 
