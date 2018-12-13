@@ -114,10 +114,10 @@ void sim_t::make_enclave_pages() {
   for (size_t i = 1; i <= nenclaves; i++) {
     for (size_t j = 0; j < NUM_OF_ENCLAVE_PAGES; j++) {
       size_t code_page = NUM_OF_ENCLAVE_PAGES*i + j;
-      size_t stack_page = STACK_PAGE_OFFSET*(procs.size() + i - 1) + NUM_OF_ENCLAVE_PAGES*(i+1) + j; 
+      size_t stack_page = STACK_PAGE_OFFSET*(procs.size() + i - 1) + NUM_OF_ENCLAVE_PAGES*(i+1) + j;
       page_owners[code_page].owner = i; //code/data pages
       page_owners[stack_page].owner = i; //stack pages
-      fprintf(stderr, "Setting page %d and %d to enclave %d.\n", code_page, stack_page, i);
+      fprintf(stderr, "Setting page 0x%02x and 0x%04x to enclave %d.\n", code_page, stack_page, i);
     }
   }
 }

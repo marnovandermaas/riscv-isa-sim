@@ -308,6 +308,8 @@ private:
   reg_t max_isa;
   std::string isa_string;
   bool histogram_enabled;
+  page_owner_t *page_owners;
+  size_t num_of_pages;
   bool halt_on_reset;
   enclave_id_t enclave_id;
 

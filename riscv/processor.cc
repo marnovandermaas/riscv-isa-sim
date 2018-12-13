@@ -21,7 +21,7 @@
 
 processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
         enclave_id_t e_id, page_owner_t *page_owners, size_t num_of_pages, bool halt_on_reset)
-  : debug(false), halt_request(false), sim(sim), ext(NULL), id(id),
+  : debug(false), halt_request(false), sim(sim), ext(NULL), id(id), page_owners(page_owners), num_of_pages(num_of_pages),
   halt_on_reset(halt_on_reset), last_pc(1), executions(1)
 {
   enclave_id = e_id;
@@ -544,6 +544,12 @@ void processor_t::set_csr(int which, reg_t val)
       sim->request_halt(id);//exit(0);
       break;
     #endif //bare metal output csr
+    #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
+    case CSR_ENCLAVEASSIGNREADER:
+      //least significant 16-bits are the enclave ID the rest is page number.
+      page_owners[val >> 16].reader = val & 0xFFFF;
+      break;
+    #endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
   }
 }
 
@@ -572,6 +578,20 @@ reg_t processor_t::get_csr(int which)
   #ifdef BARE_METAL_OUTPUT_CSR
   if (which == CSR_BAREMETALOUTPUT || which == CSR_BAREMETALEXIT){
     return 0;
+  }
+  #endif
+
+  #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
+  if (which == CSR_ENCLAVEASSIGNREADER) {
+    return 0;
+  }
+  if (which == CSR_ENCLAVEGETMAILBOXBASEADDRESS){
+    for(size_t i = 0 ; i < num_of_pages; i++) {
+      //TODO modify this to also check for a particular sender id.
+      if(page_owners[i].reader == enclave_id) {
+        return i*PGSIZE;
+      }
+    }
   }
   #endif
 
