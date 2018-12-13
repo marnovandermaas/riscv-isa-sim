@@ -75,7 +75,7 @@ private:
   bool histogram_enabled; // provide a histogram of PCs
   bool dtb_enabled;
   remote_bitbang_t* remote_bitbang;
-  enclave_id_t *page_owners;
+  page_owner_t *page_owners;
 
   // memory-mapped I/O routines
   char* addr_to_mem(reg_t addr);

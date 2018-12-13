@@ -57,9 +57,10 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
 {
   signal(SIGINT, &handle_signal);
 
-  page_owners = new enclave_id_t[num_of_pages];
+  page_owners = new page_owner_t[num_of_pages];
   for(reg_t i = 0; i < num_of_pages; i++) {
-    page_owners[i] = ENCLAVE_DEFAULT_ID;
+    page_owners[i].owner = ENCLAVE_DEFAULT_ID;
+    page_owners[i].reader = ENCLAVE_INVALID_ID;
   }
 
   for (auto& x : mems)
@@ -114,8 +115,8 @@ void sim_t::make_enclave_pages() {
     for (size_t j = 0; j < NUM_OF_ENCLAVE_PAGES; j++) {
       size_t code_page = NUM_OF_ENCLAVE_PAGES*i + j;
       size_t stack_page = STACK_PAGE_OFFSET*(procs.size() + i - 1) + NUM_OF_ENCLAVE_PAGES*(i+1) + j; 
-      page_owners[code_page] = i; //code/data pages
-      page_owners[stack_page] = i; //stack pages
+      page_owners[code_page].owner = i; //code/data pages
+      page_owners[stack_page].owner = i; //stack pages
       fprintf(stderr, "Setting page %d and %d to enclave %d.\n", code_page, stack_page, i);
     }
   }

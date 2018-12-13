@@ -4,7 +4,7 @@
 #include "simif.h"
 #include "processor.h"
 
-mmu_t::mmu_t(simif_t* sim, processor_t* proc, enclave_id_t *page_owners, size_t num_of_pages)
+mmu_t::mmu_t(simif_t* sim, processor_t* proc, page_owner_t *page_owners, size_t num_of_pages)
  : sim(sim), proc(proc), page_owners(page_owners), num_of_pages(num_of_pages),
   check_triggers_fetch(false),
   check_triggers_load(false),
@@ -88,11 +88,14 @@ reg_t reg_from_bytes(size_t len, const uint8_t* bytes)
   abort();
 }
 
-bool mmu_t::check_identifier(reg_t paddr, enclave_id_t id) {
+bool mmu_t::check_identifier(reg_t paddr, enclave_id_t id, bool load) {
   if(paddr >= DRAM_BASE && paddr < DRAM_BASE + PGSIZE*num_of_pages) {
     reg_t dram_offset = paddr - DRAM_BASE;
     reg_t page_num = dram_offset / PGSIZE;
-    return id == page_owners[page_num];
+    if(load && id == page_owners[page_num].reader) {
+      return true;
+    }
+    return id == page_owners[page_num].owner;
   }
   return true;
 }
@@ -101,7 +104,7 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t i
 {
   reg_t paddr = translate(addr, LOAD);
   if (auto host_addr = sim->addr_to_mem(paddr)) {
-    if(check_identifier(paddr, id)) {
+    if(check_identifier(paddr, id, true)) {
       memcpy(bytes, host_addr, len);
       if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD))
         tracer.trace(paddr, len, LOAD); //TODO should tracer trace any unauthorized loads?
@@ -136,7 +139,7 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
   }
 
   if (auto host_addr = sim->addr_to_mem(paddr)) {
-    if(check_identifier(paddr, id)) {
+    if(check_identifier(paddr, id, false)) {
       memcpy(host_addr, bytes, len);
       if (tracer.interested_in_range(paddr, paddr + PGSIZE, STORE))
         tracer.trace(paddr, len, STORE); //TODO should tracer know about an unauthorized store?

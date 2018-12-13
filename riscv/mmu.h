@@ -53,9 +53,9 @@ class trigger_matched_t
 class mmu_t
 {
 private:
-  bool check_identifier(reg_t paddr, enclave_id_t id);
+  bool check_identifier(reg_t paddr, enclave_id_t id, bool load);
 public:
-  mmu_t(simif_t* sim, processor_t* proc, enclave_id_t *page_owners, size_t num_pages);
+  mmu_t(simif_t* sim, processor_t* proc, page_owner_t *page_owners, size_t num_pages);
   ~mmu_t();
 
   inline reg_t misaligned_load(reg_t addr, size_t size)
@@ -244,7 +244,7 @@ public:
   {
     auto tlb_entry = translate_insn_addr(addr);
     reg_t paddr = tlb_entry.target_offset + addr;
-    if(!check_identifier(paddr, id)) {
+    if(!check_identifier(paddr, id, false)) {
       return NULL;
     }
     insn_bits_t insn = *(uint16_t*)(tlb_entry.host_offset + addr);
@@ -322,7 +322,7 @@ private:
   memtracer_list_t tracer;
   reg_t load_reservation_address;
   uint16_t fetch_temp;
-  enclave_id_t *page_owners;
+  page_owner_t *page_owners;
   size_t num_of_pages;
 
   // implement an instruction cache for simulator performance
