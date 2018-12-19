@@ -547,8 +547,16 @@ void processor_t::set_csr(int which, reg_t val)
     #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
     case CSR_ENCLAVEASSIGNREADER:
       //least significant 16-bits are the enclave ID the rest is page number.
-      page_owners[val >> 16].reader = val & 0xFFFF;
+      if(enclave_id == page_owners[val].owner) {//TODO check if val is not out of bounds
+        page_owners[val].reader = state.arg_enclave_id;
+      }
       break;
+    case CSR_ENCLAVEDONATEPAGE:
+      if(enclave_id == page_owners[val].owner) {//TODO check if val is not out of bounds
+        page_owners[val].owner = state.arg_enclave_id;
+      }
+    case CSR_ENCLAVESETARGID:
+      state.arg_enclave_id = val;
     #endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
   }
 }
@@ -582,16 +590,16 @@ reg_t processor_t::get_csr(int which)
   #endif
 
   #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-  if (which == CSR_ENCLAVEASSIGNREADER) {
+  if (which == CSR_ENCLAVEASSIGNREADER || which == CSR_ENCLAVEDONATEPAGE || which == CSR_ENCLAVESETARGID) {
     return 0;
   }
   if (which == CSR_ENCLAVEGETMAILBOXBASEADDRESS){
     for(size_t i = 0 ; i < num_of_pages; i++) {
-      //TODO modify this to also check for a particular sender id.
-      if(page_owners[i].reader == enclave_id) {
-        return i*PGSIZE;
+      if(page_owners[i].reader == enclave_id && page_owners[i].owner == state.arg_enclave_id) {
+        return (i*PGSIZE) | DRAM_BASE;
       }
     }
+    return 0;
   }
   #endif
 

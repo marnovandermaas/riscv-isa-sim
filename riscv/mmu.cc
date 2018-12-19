@@ -149,6 +149,7 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
       fprintf(stderr, "Denying store access to enclave %d, virtual address 0x%x, physical address 0x%x, number of pages %d, page size 0x%x\n", id, addr, paddr, num_of_pages, PGSIZE);
     }
   } else if (!sim->mmio_store(paddr, len, bytes)) {
+    fprintf(stderr, "mmu.cc: Throwing store access fault in store_slow_path.\n");
     throw trap_store_access_fault(addr);
   }
 }
@@ -250,7 +251,9 @@ fail_access:
   switch (type) {
     case FETCH: throw trap_instruction_access_fault(addr);
     case LOAD: throw trap_load_access_fault(addr);
-    case STORE: throw trap_store_access_fault(addr);
+    case STORE: 
+      fprintf(stderr, "mmu.cc: throwing trap store access fault in page walk.\n");
+      throw trap_store_access_fault(addr);
     default: abort();
   }
 }
