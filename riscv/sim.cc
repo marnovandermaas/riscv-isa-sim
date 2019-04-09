@@ -32,6 +32,9 @@ void sim_t::request_halt(uint32_t id) {
   for(unsigned int i = 0; i < procs.size(); i++) {
     if(!procRequests[i]) return;
   }
+  for(unsigned int i = 0; i < procs.size(); i++) {
+    fprintf(stderr, "Processor %u ended with instruction count %lu.\n", i, procs[i]->get_csr(CSR_MINSTRET));
+  }
   for(size_t i = 0; i < nenclaves + 1; i++) {
     if(ics[i] || dcs[i]) fprintf(stderr, "\nCache stats for enclave %lu:\n", i);
     if(ics[i]) ics[i]->print_stats();
@@ -117,7 +120,7 @@ void sim_t::make_enclave_pages() {
       size_t stack_page = STACK_PAGE_OFFSET*(procs.size() + i - 1) + NUM_OF_ENCLAVE_PAGES*(i+1) + j;
       page_owners[code_page].owner = i; //code/data pages
       page_owners[stack_page].owner = i; //stack pages
-      fprintf(stderr, "Setting page 0x%02x and 0x%04x to enclave %d.\n", code_page, stack_page, i);
+      fprintf(stderr, "sim.cc: Setting page 0x%02lx and 0x%04lx to enclave %lu.\n", code_page, stack_page, i);
     }
   }
 }

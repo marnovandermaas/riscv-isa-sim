@@ -111,7 +111,7 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t i
       else
         refill_tlb(addr, paddr, host_addr, LOAD);
     } else {
-      fprintf(stderr, "Denying load access to enclave %d, virtual address 0x%x, physical address 0x%x, number of pages %d, page size 0x%x\n", id, addr, paddr, num_of_pages, PGSIZE);
+      fprintf(stderr, "Denying load access to enclave %lu, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", id, addr, paddr, num_of_pages, PGSIZE);
       for (reg_t i = 0; i < len; i++) {
         bytes[i] = 0xFF;
       }
@@ -146,7 +146,7 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
       else
         refill_tlb(addr, paddr, host_addr, STORE);
     } else {
-      fprintf(stderr, "Denying store access to enclave %d, virtual address 0x%x, physical address 0x%x, number of pages %d, page size 0x%x\n", id, addr, paddr, num_of_pages, PGSIZE);
+      fprintf(stderr, "Denying store access to enclave %lu, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", id, addr, paddr, num_of_pages, PGSIZE);
     }
   } else if (!sim->mmio_store(paddr, len, bytes)) {
     fprintf(stderr, "mmu.cc: Throwing store access fault in store_slow_path.\n");

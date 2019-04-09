@@ -48,7 +48,7 @@ processor_t::~processor_t()
       fprintf(stderr, "%0" PRIx64 " %" PRIu64 "\n", it.first, it.second);
   }
 #endif
-
+  
   delete mmu;
   delete disassembler;
 }
