@@ -12,6 +12,8 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <iostream>
+#include <fstream>
 
 static void help()
 {
@@ -59,7 +61,16 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
     std::vector<std::pair<reg_t, mem_t*>> memory_vector = std::vector<std::pair<reg_t, mem_t*>>(2, std::make_pair(reg_t(0), (mem_t *) NULL));
     memory_vector[0] = std::make_pair(reg_t(DRAM_BASE), new mem_t(size));
     //This initializes the memory enclave memory device (4 pages in size for now)
-    memory_vector[1] = std::make_pair(reg_t(0x40000000), new mem_t(PGSIZE*4)); //TODO stop using the constant offset and include the management enclave header file.
+    std::ifstream management_file ("management.bin", std::ios::in|std::ios::binary);
+    if(!management_file.good()) {
+      fprintf(stderr, "spike.cc: could not open management file.\n");
+      exit(-1);
+    }
+    size_t file_size = PGSIZE;
+    char *memblock = (char *) calloc(file_size, sizeof(char));
+    management_file.read(memblock, file_size);
+    management_file.close();
+    memory_vector[1] = std::make_pair(reg_t(0x40000000), new mem_t(PGSIZE*4, file_size, memblock)); //TODO stop using the constant offset and include the management enclave header file.
     for(size_t i = 0; i < memory_vector.size(); i++) {
       fprintf(stderr, "spike.cc: Memory vector [%lu]: (0x%lx, 0x%lx)\n", i, memory_vector[i].first, memory_vector[i].second->size());
     }

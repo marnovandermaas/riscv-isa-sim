@@ -47,6 +47,22 @@ class mem_t : public abstract_device_t {
     if (!data)
       throw std::runtime_error("couldn't allocate " + std::to_string(size) + " bytes of target memory");
   }
+  //This constructor initializes data with the content of initial_data up to length.
+  mem_t(size_t size, size_t length, char *initial_data) : mem_t(size) {
+    if(length <= size) {
+      fprintf(stderr, "Initializing management code page:\n");
+      for(size_t i = 0; i < size; i++) {
+        if(i < length) {
+          data[i] = initial_data[i];
+          fprintf(stderr, "%02x", initial_data[i]);
+        }
+      }
+      fprintf(stderr, "\n");
+    } else {
+      fprintf(stderr, "devices.h: could not initialize memory: %lu, %lu\n", size, length);
+      exit(-1);
+    }
+  }
   mem_t(const mem_t& that) = delete;
   ~mem_t() { free(data); }
 
