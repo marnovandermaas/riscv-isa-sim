@@ -91,7 +91,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
     //char *memblock = (char *) calloc(file_size, sizeof(char));
     //management_file.read(memblock, file_size);
     //management_file.close();
-    memory_vector[1] = std::make_pair(reg_t(0x40000000), new mem_t(PGSIZE*4, file_size, management_array)); //TODO stop using the constant offset and include the management enclave header file.
+    memory_vector[1] = std::make_pair(reg_t(MANAGEMENT_ENCLAVE_BASE), new mem_t(MANAGEMENT_ENCLAVE_SIZE, file_size, management_array)); //TODO stop using the constant offset and include the management enclave header file.
     for(size_t i = 0; i < memory_vector.size(); i++) {
       fprintf(stderr, "spike.cc: Memory vector [%lu]: (0x%lx, 0x%lx)\n", i, memory_vector[i].first, memory_vector[i].second->size());
     }
@@ -242,7 +242,6 @@ int main(int argc, char** argv)
       rmts_arg[i] = NULL;
     }
   }
-
 
   sim_t s(isa, nprocs + nenclaves, nenclaves, halted, start_pc, mems, htif_args, std::move(hartids),
       progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2, rmts_arg, num_of_pages);
