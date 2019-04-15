@@ -48,7 +48,7 @@ processor_t::~processor_t()
       fprintf(stderr, "%0" PRIx64 " %" PRIu64 "\n", it.first, it.second);
   }
 #endif
-  
+
   delete mmu;
   delete disassembler;
 }
@@ -543,7 +543,7 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_BAREMETALEXIT:
       sim->request_halt(id);//exit(0);
       break;
-    #endif //bare metal output csr
+    #endif //BARE_METAL_OUTPUT_CSR
     #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
     case CSR_ENCLAVEASSIGNREADER:
       //least significant 16-bits are the enclave ID the rest is page number.
@@ -555,9 +555,15 @@ void processor_t::set_csr(int which, reg_t val)
       if(enclave_id == page_owners[val].owner) {//TODO check if val is not out of bounds
         page_owners[val].owner = state.arg_enclave_id;
       }
+      break;
     case CSR_ENCLAVESETARGID:
       state.arg_enclave_id = val;
+      break;
     #endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
+    #ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
+    case CSR_MANAGEGETENCLAVEID:
+      break; //This CSR is read-only.
+    #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
   }
 }
 
@@ -587,7 +593,7 @@ reg_t processor_t::get_csr(int which)
   if (which == CSR_BAREMETALOUTPUT || which == CSR_BAREMETALEXIT){
     return 0;
   }
-  #endif
+  #endif //BARE_METAL_OUTPUT_CSR
 
   #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
   if (which == CSR_ENCLAVEASSIGNREADER || which == CSR_ENCLAVEDONATEPAGE || which == CSR_ENCLAVESETARGID) {
@@ -601,7 +607,13 @@ reg_t processor_t::get_csr(int which)
     }
     return 0;
   }
-  #endif
+  #endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
+
+  #ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
+  if (which == CSR_MANAGEGETENCLAVEID) {
+    return enclave_id;
+  }
+  #endif // MANAGEMENT_ENCLAVE_INSTRUCTIONS
 
   switch (which)
   {

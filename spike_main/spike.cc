@@ -58,8 +58,16 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
       throw std::runtime_error("Size would overflow size_t");
     *num_of_pages = size / PGSIZE;
     if ((size % PGSIZE) != 0) *num_of_pages++;
-    std::vector<std::pair<reg_t, mem_t*>> memory_vector = std::vector<std::pair<reg_t, mem_t*>>(2, std::make_pair(reg_t(0), (mem_t *) NULL));
-    memory_vector[0] = std::make_pair(reg_t(DRAM_BASE), new mem_t(size));
+
+#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
+    int num_mems = 2;
+#else
+    int num_mems = 1;
+#endif
+    fprintf(stderr, "spike.cc: creating vector with %d elements.\n", num_mems);
+    std::vector<std::pair<reg_t, mem_t*>> memory_vector = std::vector<std::pair<reg_t, mem_t*>>(num_mems, std::make_pair(reg_t(0), (mem_t *) NULL));
+
+#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
     //This initializes the memory enclave memory device (4 pages in size for now)
     FILE *management_file;
     management_file = fopen("management.bin", "rb");
@@ -92,9 +100,8 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
     //management_file.read(memblock, file_size);
     //management_file.close();
     memory_vector[1] = std::make_pair(reg_t(MANAGEMENT_ENCLAVE_BASE), new mem_t(MANAGEMENT_ENCLAVE_SIZE, file_size, management_array)); //TODO stop using the constant offset and include the management enclave header file.
-    for(size_t i = 0; i < memory_vector.size(); i++) {
-      fprintf(stderr, "spike.cc: Memory vector [%lu]: (0x%lx, 0x%lx)\n", i, memory_vector[i].first, memory_vector[i].second->size());
-    }
+#endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
+    memory_vector[0] = std::make_pair(reg_t(DRAM_BASE), new mem_t(size));
     return memory_vector;
   }
 
