@@ -234,7 +234,7 @@ void sim_t::make_dtb()
 
   fprintf(stderr, "sim.cc: Adding boot rom with start_pc %016lx\n", start_pc);
 
-  uint32_t reset_vec[reset_vec_size] = {
+  uint32_t reset_vec[reset_vec_size + nenclaves + 1] = {
     0x297,                                      // auipc  t0,0x0
     0x28593 + (reset_vec_size * 4 << 20),       // addi   a1, t0, &dtb
     0xf1402573,                                 // csrr   a0, mhartid
@@ -244,8 +244,20 @@ void sim_t::make_dtb()
     0x28067,                                    // jr     t0
     0,
     (uint32_t) (start_pc & 0xffffffff), //This is the PC that is used by the above instructions to jump to the start pc.
-    (uint32_t) (start_pc >> 32)
+    (uint32_t) (start_pc >> 32),
+    (uint32_t) (nenclaves & 0xffffffff)
   };
+
+  fprintf(stderr, "sim.cc: reset vector contents.\n");
+
+  for (size_t i = 0; i < nenclaves; i++) {
+    //TODO actually use the procs.id value
+    reset_vec[i + 1 + reset_vec_size] = procs.size() - nenclaves + i; //This statement assumes all ids are from 0..procs.size()-1
+  }
+
+  for(size_t i = 0; i < reset_vec_size + nenclaves + 1; i++) {
+    fprintf(stderr, "sim.cc: 0x%08x,\n", reset_vec[i]);
+  }
 
   std::vector<char> rom((char*)reset_vec, (char*)reset_vec + sizeof(reset_vec));
 
