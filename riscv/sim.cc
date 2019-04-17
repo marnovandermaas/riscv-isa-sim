@@ -59,6 +59,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
     debug_module(this, progsize, max_bus_master_bits, require_authentication), ics(ics), dcs(dcs), l2(l2), rmts(rmts)
 {
   signal(SIGINT, &handle_signal);
+  fprintf(stderr, "sim.cc: Constructing simulator with %lu processors and %lu enclaves.\n", nprocs, nenclaves);
 
   page_owners = new page_owner_t[num_of_pages];
   for(reg_t i = 0; i < num_of_pages; i++) {
@@ -312,6 +313,7 @@ void sim_t::write_chunk(addr_t taddr, size_t len, const void* src)
 
 void sim_t::proc_reset(unsigned id)
 {
-  fprintf(stderr, "sim.cc: processor reset.\n");
+  fprintf(stderr, "sim.cc: processor reset");
   debug_module.proc_reset(id);
+  fprintf(stderr, ", done.\n");
 }

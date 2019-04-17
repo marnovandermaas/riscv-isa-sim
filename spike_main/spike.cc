@@ -80,9 +80,9 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
     size_t file_status;
     for(size_t i = 0; i < PGSIZE; i++) {
       file_status = fread(&management_array[i], sizeof(char), 1, management_file);
-      fprintf(stderr, "%02x", management_array[i] & 0xFF);
+      //fprintf(stderr, "%02x ", management_array[i] & 0xFF); //Need to &0xFF because otherwise C will sign extend values.
       if (file_status != 1) {
-        fprintf(stderr, " spike.cc: read management binary with %lu amount of Bytes, ferror: %d, feof: %d\n", i, ferror(management_file), feof(management_file));
+        fprintf(stderr, "spike.cc: read management binary with %lu amount of Bytes, ferror: %d, feof: %d\n", i, ferror(management_file), feof(management_file));
         if(ferror(management_file)){
           exit(-1);
         }
@@ -208,6 +208,9 @@ int main(int argc, char** argv)
   if (!*argv1)
     help();
 
+
+  nenclaves++; //TODO remove this and make sure that the first enclave core is not just reserved for management stuff.
+
   std::unique_ptr<icache_sim_t> ics[nenclaves + 1];
   std::unique_ptr<dcache_sim_t> dcs[nenclaves + 1];
   std::unique_ptr<remapping_table_t> rmts[nenclaves + 1];
@@ -284,6 +287,7 @@ int main(int argc, char** argv)
     if (extension) s.get_core(i)->register_extension(extension());
   }
 
+  fprintf(stderr, "sim.cc: 4\n");
   for (size_t i = 0; i < nenclaves; i++)
   {
     size_t core_id = i + nprocs;
@@ -307,6 +311,8 @@ int main(int argc, char** argv)
     }
     if (extension) s.get_core(core_id)->register_extension(extension());
   }
+
+  fprintf(stderr, "sim.cc: 5\n");
 
   s.set_debug(debug);
   s.set_log(log);

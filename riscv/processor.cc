@@ -24,6 +24,7 @@ processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
   : debug(false), halt_request(false), sim(sim), ext(NULL), id(id), page_owners(page_owners), num_of_pages(num_of_pages),
   halt_on_reset(halt_on_reset), last_pc(1), executions(1)
 {
+  fprintf(stderr, "processor.cc: constructing procesor with id %u and enclave idnetifier %lu.\n", id, e_id);
   enclave_id = e_id;
   parse_isa_string(isa);
   register_base_instructions();
@@ -561,8 +562,30 @@ void processor_t::set_csr(int which, reg_t val)
       break;
     #endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
     #ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-    case CSR_MANAGEGETENCLAVEID:
-      break; //This CSR is read-only.
+    case CSR_MANAGEENCLAVEID:
+      //This instruction should only succeed if the pc is in within the management enclave.
+      if ((state.pc >= MANAGEMENT_ENCLAVE_BASE) && (state.pc < MANAGEMENT_ENCLAVE_BASE + MANAGEMENT_ENCLAVE_SIZE))
+      {
+        fprintf(stderr, "processor.cc: Enclave ID on core %u changed to 0x%lx\n", id, val);
+        enclave_id = val;
+      } else {
+        fprintf(stderr, "processor.cc: ERROR: pc was not in management enclave code 0x%lx", state.pc);
+      }
+      break;
+    case CSR_MANAGECHANGEPAGETAG:
+      //TODO fail if tag is not cached.
+      //This instruction takes as argument an address within the page that needs managing.
+      if(enclave_id == ENCLAVE_MANAGEMENT_ID) {
+        if(val & DRAM_BASE) {
+          int index = (val & (DRAM_BASE - 1)) / PGSIZE; //Assume DRAM_BASE is just one set bit.
+          fprintf(stderr, "processor.cc: Changing page %d to tag: %lu\n", index, state.arg_enclave_id);
+          page_owners[index].owner = state.arg_enclave_id;
+        } else {
+          //TODO enable tagging for pages in boot ROM and management pages.
+          fprintf(stderr, "processor.cc: Currently tagging pages outside of DRAM is not supported 0x%lx\n", val);
+        }
+      }
+      break;
     #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
   }
 }
@@ -590,18 +613,23 @@ reg_t processor_t::get_csr(int which)
     return 0;
 
   #ifdef BARE_METAL_OUTPUT_CSR
-  if (which == CSR_BAREMETALOUTPUT || which == CSR_BAREMETALEXIT){
+  if (which == CSR_BAREMETALOUTPUT || which == CSR_BAREMETALEXIT)
+  {
     return 0;
   }
   #endif //BARE_METAL_OUTPUT_CSR
 
   #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-  if (which == CSR_ENCLAVEASSIGNREADER || which == CSR_ENCLAVEDONATEPAGE || which == CSR_ENCLAVESETARGID) {
+  if (which == CSR_ENCLAVEASSIGNREADER || which == CSR_ENCLAVEDONATEPAGE || which == CSR_ENCLAVESETARGID)
+  {
     return 0;
   }
-  if (which == CSR_ENCLAVEGETMAILBOXBASEADDRESS){
-    for(size_t i = 0 ; i < num_of_pages; i++) {
-      if(page_owners[i].reader == enclave_id && page_owners[i].owner == state.arg_enclave_id) {
+  if (which == CSR_ENCLAVEGETMAILBOXBASEADDRESS)
+  {
+    for(size_t i = 0 ; i < num_of_pages; i++)
+    {
+      if(page_owners[i].reader == enclave_id && page_owners[i].owner == state.arg_enclave_id)
+      {
         return (i*PGSIZE) | DRAM_BASE;
       }
     }
@@ -610,8 +638,13 @@ reg_t processor_t::get_csr(int which)
   #endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
 
   #ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-  if (which == CSR_MANAGEGETENCLAVEID) {
+  if (which == CSR_MANAGEENCLAVEID)
+  {
     return enclave_id;
+  }
+  if (which == CSR_MANAGECHANGEPAGETAG)
+  {
+    return 0;
   }
   #endif // MANAGEMENT_ENCLAVE_INSTRUCTIONS
 

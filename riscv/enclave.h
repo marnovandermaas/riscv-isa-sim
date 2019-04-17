@@ -3,8 +3,9 @@
 
 typedef uint64_t enclave_id_t;
 
-#define ENCLAVE_INVALID_ID 0xFFFFFFFF
-#define ENCLAVE_DEFAULT_ID 0
+#define ENCLAVE_MANAGEMENT_ID (0xFFFFFFFFFFFFFFFF)
+#define ENCLAVE_DEFAULT_ID    (0)
+#define ENCLAVE_INVALID_ID    (0xFFFFFFFFFFFFFFFE)
 
 struct page_owner_t
 {
