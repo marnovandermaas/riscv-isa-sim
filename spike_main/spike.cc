@@ -47,7 +47,7 @@ static void help()
   exit(1);
 }
 
-static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *num_of_pages)
+static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *num_of_pages, size_t num_enclaves)
 {
   // handle legacy mem argument
   char* p;
@@ -83,7 +83,9 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
       //fprintf(stderr, "%02x ", management_array[i] & 0xFF); //Need to &0xFF because otherwise C will sign extend values.
       if (file_status != 1) {
         fprintf(stderr, "spike.cc: read management binary with %lu amount of Bytes, ferror: %d, feof: %d\n", i, ferror(management_file), feof(management_file));
-        if(ferror(management_file)){
+        if(ferror(management_file) || !feof(management_file))
+        {
+          fprintf(stderr, "spike.cc: error in reading file.\n");
           exit(-1);
         }
         break;
@@ -99,7 +101,9 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
     //char *memblock = (char *) calloc(file_size, sizeof(char));
     //management_file.read(memblock, file_size);
     //management_file.close();
-    memory_vector[1] = std::make_pair(reg_t(MANAGEMENT_ENCLAVE_BASE), new mem_t(MANAGEMENT_ENCLAVE_SIZE, file_size, management_array)); //TODO stop using the constant offset and include the management enclave header file.
+    //TODO make these extra pages be local per processor.
+    size_t management_memory_size = MANAGEMENT_ENCLAVE_SIZE + PGSIZE*num_enclaves; //We need to add extra pages for the stacks of the management code.
+    memory_vector[1] = std::make_pair(reg_t(MANAGEMENT_ENCLAVE_BASE), new mem_t(management_memory_size, file_size, management_array));
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
     memory_vector[0] = std::make_pair(reg_t(DRAM_BASE), new mem_t(size));
     return memory_vector;
@@ -168,12 +172,13 @@ int main(int argc, char** argv)
 
   option_parser_t parser;
   parser.help(&help);
+  parser.option(0, "enclave", 1, [&](const char* s){nenclaves = atoi(s);});
   parser.option('h', 0, 0, [&](const char* s){help();});
   parser.option('d', 0, 0, [&](const char* s){debug = true;});
   parser.option('g', 0, 0, [&](const char* s){histogram = true;});
   parser.option('l', 0, 0, [&](const char* s){log = true;});
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
-  parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s, &num_of_pages);});
+  parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s, &num_of_pages, nenclaves);});
   // I wanted to use --halted, but for some reason that doesn't work.
   parser.option('H', 0, 0, [&](const char* s){halted = true;});
   parser.option(0, "rbb-port", 1, [&](const char* s){use_rbb = true; rbb_port = atoi(s);});
@@ -184,7 +189,6 @@ int main(int argc, char** argv)
   parser.option(0, "l2", 1, [&](const char* s){llc_string = s;});
   parser.option(0, "isa", 1, [&](const char* s){isa = s;});
   parser.option(0, "extension", 1, [&](const char* s){extension = find_extension(s);});
-  parser.option(0, "enclave", 1, [&](const char* s){nenclaves = atoi(s);});
   parser.option(0, "dump-dts", 0, [&](const char *s){dump_dts = true;});
   parser.option(0, "disable-dtb", 0, [&](const char *s){dtb_enabled = false;});
   parser.option(0, "extlib", 1, [&](const char *s){
@@ -203,7 +207,7 @@ int main(int argc, char** argv)
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
   if (mems.empty())
-    mems = make_mems("2048", &num_of_pages);
+    mems = make_mems("2048", &num_of_pages, nenclaves);
 
   if (!*argv1)
     help();
@@ -287,7 +291,6 @@ int main(int argc, char** argv)
     if (extension) s.get_core(i)->register_extension(extension());
   }
 
-  fprintf(stderr, "sim.cc: 4\n");
   for (size_t i = 0; i < nenclaves; i++)
   {
     size_t core_id = i + nprocs;
@@ -311,8 +314,6 @@ int main(int argc, char** argv)
     }
     if (extension) s.get_core(core_id)->register_extension(extension());
   }
-
-  fprintf(stderr, "sim.cc: 5\n");
 
   s.set_debug(debug);
   s.set_log(log);

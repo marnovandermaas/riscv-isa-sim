@@ -25,23 +25,29 @@ static void handle_signal(int sig)
   signal(sig, &handle_signal);
 }
 
-void sim_t::request_halt(uint32_t id) {
+void sim_t::request_halt(uint32_t id)
+{
   static bool procRequests[64] = {false};
   if(id >= 64) exit(-1);
   procRequests[id] = true;
-  for(unsigned int i = 0; i < procs.size(); i++) {
+
+  for(unsigned int i = 0; i < procs.size(); i++)
+  {
     if(!procRequests[i]) return;
   }
-  for(unsigned int i = 0; i < procs.size(); i++) {
+  for(unsigned int i = 0; i < procs.size(); i++)
+  {
     fprintf(stderr, "Processor %u ended with instruction count %lu.\n", i, procs[i]->get_csr(CSR_MINSTRET));
   }
-  for(size_t i = 0; i < nenclaves + 1; i++) {
+  for(size_t i = 0; i < nenclaves + 1; i++)
+  {
     if(ics[i] || dcs[i]) fprintf(stderr, "\nCache stats for enclave %lu:\n", i);
     if(ics[i]) ics[i]->print_stats();
     if(dcs[i]) dcs[i]->print_stats();
     if(rmts[i]) rmts[i]->print_stats();
   }
-  if(l2 != NULL) {
+  if(l2 != NULL)
+  {
     fprintf(stderr, "\nShared Cache:\n");
     l2->print_stats();
   }
@@ -62,9 +68,19 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
   fprintf(stderr, "sim.cc: Constructing simulator with %lu processors and %lu enclaves.\n", nprocs, nenclaves);
 
   page_owners = new page_owner_t[num_of_pages];
-  for(reg_t i = 0; i < num_of_pages; i++) {
+  for(reg_t i = 0; i < num_of_pages; i++)
+  {
     page_owners[i].owner = ENCLAVE_DEFAULT_ID;
     page_owners[i].reader = ENCLAVE_INVALID_ID;
+  }
+
+  size_t num_of_mailboxes = nenclaves + 1;
+  struct Message_t mailboxes[num_of_mailboxes]; //One mailbox per enclave including one for the normal worls
+
+  for(size_t i = 0; i < num_of_mailboxes; i++) {
+    mailboxes[i].source = ENCLAVE_INVALID_ID;
+    mailboxes[i].destination = ENCLAVE_INVALID_ID;
+    mailboxes[i].content = 0;
   }
 
   for (auto& x : mems)
@@ -74,23 +90,30 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
 
   debug_mmu = new mmu_t(this, NULL, page_owners, num_of_pages);
 
-  if (hartids.size() == 0) {
-    for (size_t i = 0; i < procs.size() - nenclaves; i++) {
-      procs[i] = new processor_t(isa, this, i, ENCLAVE_DEFAULT_ID, page_owners, num_of_pages, halted);
+  if (hartids.size() == 0)
+  { //TODO add the mailbox slots to the processor_t constructor.
+    for (size_t i = 0; i < procs.size() - nenclaves; i++)
+    {
+      procs[i] = new processor_t(isa, this, i, ENCLAVE_DEFAULT_ID, page_owners, num_of_pages, &mailboxes[0], mailboxes, num_of_mailboxes, halted);
     }
     enclave_id_t current_id = 1;
-    for (size_t i = procs.size() - nenclaves; i < procs.size(); i++) {
-      procs[i] = new processor_t(isa, this, i, current_id++, page_owners, num_of_pages, halted);
+    for (size_t i = procs.size() - nenclaves; i < procs.size(); i++)
+    {
+      procs[i] = new processor_t(isa, this, i, current_id, page_owners, num_of_pages, &mailboxes[current_id], mailboxes, num_of_mailboxes, halted);
+      current_id += 1;
     }
   }
-  else {
-    if (hartids.size() != procs.size()) {
+  else
+  {
+    if (hartids.size() != procs.size())
+    {
       std::cerr << "Number of specified hartids doesn't match number of processors or you specified both hardids and enclaves" << strerror(errno) << std::endl;
       exit(1);
     }
-    for (size_t i = 0; i < procs.size(); i++) {
-      procs[i] = new processor_t(isa, this, ENCLAVE_DEFAULT_ID, hartids[i], page_owners, num_of_pages, halted);
-    }
+    //for (size_t i = 0; i < procs.size(); i++)
+    //{
+    //  procs[i] = new processor_t(isa, this, ENCLAVE_DEFAULT_ID, hartids[i], page_owners, num_of_pages, &mailboxes[0], num_of_mailboxes, halted);
+    //}
   }
 
   clint.reset(new clint_t(procs));
@@ -285,7 +308,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
 
 void sim_t::reset()
 {
-  fprintf(stderr, "sim.cc: resetting.\n");
+  //fprintf(stderr, "sim.cc: resetting.\n");
   make_enclave_pages();
   if (dtb_enabled)
     make_dtb();
@@ -313,7 +336,5 @@ void sim_t::write_chunk(addr_t taddr, size_t len, const void* src)
 
 void sim_t::proc_reset(unsigned id)
 {
-  fprintf(stderr, "sim.cc: processor reset");
   debug_module.proc_reset(id);
-  fprintf(stderr, ", done.\n");
 }
