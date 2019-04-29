@@ -2,12 +2,9 @@
 #define _RISCV_ENCLAVE_H
 
 #include "decode.h"
+#include "../managementenclave/enclaveLibrary.h"
 
 typedef uint64_t enclave_id_t;
-
-#define ENCLAVE_MANAGEMENT_ID (0xFFFFFFFFFFFFFFFF)
-#define ENCLAVE_DEFAULT_ID    (0)
-#define ENCLAVE_INVALID_ID    (0xFFFFFFFFFFFFFFFE)
 
 struct Message_t {
   enclave_id_t source;

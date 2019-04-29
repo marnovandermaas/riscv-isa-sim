@@ -70,7 +70,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
 #ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
     //This initializes the memory enclave memory device (4 pages in size for now)
     FILE *management_file;
-    management_file = fopen("management.bin", "rb");
+    management_file = fopen("../build/management.bin", "rb");
     if(management_file == NULL) {
       fprintf(stderr, "spike.cc: could not open management file.\n");
       exit(-1);
