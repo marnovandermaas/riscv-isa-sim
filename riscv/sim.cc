@@ -33,7 +33,11 @@ void sim_t::request_halt(uint32_t id)
 
   for(unsigned int i = 0; i < procs.size(); i++)
   {
-    if(!procRequests[i]) return;
+    if(!procRequests[i]) {
+      if(i != 1) {//TODO remove this and just exit from the management code.
+        return;
+      }
+    }
   }
   for(unsigned int i = 0; i < procs.size(); i++)
   {
@@ -127,26 +131,27 @@ sim_t::~sim_t()
   delete debug_mmu;
 }
 
-void sim_t::make_enclave_pages() {
-  addr_t base_addr = DRAM_BASE;
-  size_t len = 8;
-  char data[8];
-  for(addr_t addr = base_addr; addr < base_addr + PGSIZE; addr += len) {
-    read_chunk(addr, len, data);
-    for (size_t i = 1; i <= nenclaves; i++) {
-      write_chunk(addr+i*NUM_OF_ENCLAVE_PAGES*PGSIZE, len, data);
-    }
-  }
-  for (size_t i = 1; i <= nenclaves; i++) {
-    for (size_t j = 0; j < NUM_OF_ENCLAVE_PAGES; j++) {
-      size_t code_page = NUM_OF_ENCLAVE_PAGES*i + j;
-      size_t stack_page = STACK_PAGE_OFFSET*(procs.size() + i - 1) + NUM_OF_ENCLAVE_PAGES*(i+1) + j;
-      page_owners[code_page].owner = i; //code/data pages
-      page_owners[stack_page].owner = i; //stack pages
-      fprintf(stderr, "sim.cc: Setting page 0x%02lx and 0x%04lx to enclave %lu.\n", code_page, stack_page, i);
-    }
-  }
-}
+//This is moved to the normal world
+// void sim_t::make_enclave_pages() {
+//   addr_t base_addr = DRAM_BASE;
+//   size_t len = 8;
+//   char data[8];
+//   for(addr_t addr = base_addr; addr < base_addr + PGSIZE; addr += len) {
+//     read_chunk(addr, len, data);
+//     for (size_t i = 1; i <= nenclaves; i++) {
+//       write_chunk(addr+i*NUM_OF_ENCLAVE_PAGES*PGSIZE, len, data);
+//     }
+//   }
+//   for (size_t i = 1; i <= nenclaves; i++) {
+//     for (size_t j = 0; j < NUM_OF_ENCLAVE_PAGES; j++) {
+//       size_t code_page = NUM_OF_ENCLAVE_PAGES*i + j;
+//       size_t stack_page = STACK_PAGE_OFFSET*(procs.size() + i - 1) + NUM_OF_ENCLAVE_PAGES*(i+1) + j;
+//       page_owners[code_page].owner = i; //code/data pages
+//       page_owners[stack_page].owner = i; //stack pages
+//       fprintf(stderr, "sim.cc: Setting page 0x%02lx and 0x%04lx to enclave %lu.\n", code_page, stack_page, i);
+//     }
+//   }
+// }
 
 void sim_thread_main(void* arg)
 {
@@ -309,7 +314,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
 void sim_t::reset()
 {
   //fprintf(stderr, "sim.cc: resetting.\n");
-  make_enclave_pages();
+  //make_enclave_pages();
   if (dtb_enabled)
     make_dtb();
 }

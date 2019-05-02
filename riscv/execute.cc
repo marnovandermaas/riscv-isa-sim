@@ -117,13 +117,13 @@ void processor_t::step(size_t n)
        pc = state.pc; \
        break; \
      } else { \
-       if(pc == DRAM_BASE && enclave_id != 0) { \
-         pc = DRAM_BASE + enclave_id*NUM_OF_ENCLAVE_PAGES*PGSIZE; \
-       } \
        state.pc = pc; \
        instret++; \
      }
 
+       //if(pc == DRAM_BASE && enclave_id != 0) { \
+       //   pc = DRAM_BASE + enclave_id*NUM_OF_ENCLAVE_PAGES*PGSIZE; \
+       //} \ //Removed this from else statement in advance_pc because it is super ugly
     try
     {
       take_pending_interrupt();
@@ -186,7 +186,7 @@ void processor_t::step(size_t n)
         // corresponding to the instruction.
         auto ic_entry = _mmu->access_icache(pc, enclave_id);
         if(ic_entry == NULL) {
-          throw trap_illegal_instruction(0); 
+          throw trap_illegal_instruction(0);
         }
 
         // This macro is included in "icache.h" included within the switch

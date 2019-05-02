@@ -4,8 +4,6 @@
 #include "decode.h"
 #include "../managementenclave/enclaveLibrary.h"
 
-typedef uint64_t enclave_id_t;
-
 struct Message_t {
   enclave_id_t source;
   enclave_id_t destination;

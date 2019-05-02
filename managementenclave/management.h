@@ -1,22 +1,22 @@
 #ifndef PRAESIDIO_MANAGEMENT_H
 #define PRAESIDIO_MANAGEMENT_H
 
+typedef unsigned long uint64_t; //TODO make sure it is 64-bit
+
 #include "enclaveLibrary.h"
 
 #define PAGE_SIZE (1 << 12) //2^12 = 4096 number of Bytes
 
 //Definition of the base addresses of the three trusted pages:
-#define MANAGEMENT_CODE_BASE_ADDRESS ((char *) MANAGEMENT_ENCLAVE_BASE)
-#define PAGE_DIRECTORY_BASE_ADDRESS ((char *) MANAGEMENT_CODE_BASE_ADDRESS + PAGE_SIZE) //Assumes code is less than 1 page in size
-#define ENCLAVE_DATA_BASE_ADDRESS ((char *) PAGE_DIRECTORY_BASE_ADDRESS + PAGE_SIZE)
-#define MANAGEMENT_STACK_BASE_ADDRESS ((char *) ENCLAVE_DATA_BASE_ADDRESS + PAGE_SIZE)
+#define MANAGEMENT_CODE_BASE_ADDRESS ((Address_t) MANAGEMENT_ENCLAVE_BASE)
+#define PAGE_DIRECTORY_BASE_ADDRESS ((Address_t) MANAGEMENT_CODE_BASE_ADDRESS + PAGE_SIZE) //Assumes code is less than 1 page in size
+#define ENCLAVE_DATA_BASE_ADDRESS ((Address_t) PAGE_DIRECTORY_BASE_ADDRESS + PAGE_SIZE)
+#define MANAGEMENT_STACK_BASE_ADDRESS ((Address_t) ENCLAVE_DATA_BASE_ADDRESS + PAGE_SIZE)
 
 #define NUMBER_OF_ENCLAVE_CORES 1
 
-typedef unsigned long enclave_id_t; //TODO make sure it is 64-bit
-
-typedef int Address_t;
-typedef unsigned int Permissions_t; //TODO make sure this is 16-bit
+typedef unsigned long Address_t;
+typedef unsigned short Permissions_t; //TODO make sure this is 16-bit
 typedef int Register_t;
 typedef unsigned int CoreID_t; //TODO make sure this is 32-bit
 
@@ -34,9 +34,16 @@ struct PhysCap_t {
   enclave_id_t owner;
 };
 
+enum EnclaveState_t {
+  STATE_CREATED         = 0x0,
+  STATE_RECEIVINGPAGES  = 0x1,
+  STATE_FINALIZED       = 0x2,
+};
+
 struct EnclaveData_t {
+  enum EnclaveState_t state;
   enclave_id_t eID;
-  //TODO do you need a code entry point?
+  Address_t codeEntryPoint;
   struct Context_t restorePoint;
 };
 

@@ -1,6 +1,6 @@
 #include "instructions.h"
 
-void switchEnclave(enclave_id_t id) {
+void switchEnclaveID(enclave_id_t id) {
   asm volatile (
     "csrrw zero, 0x40E, %0"
     : //output
@@ -91,5 +91,5 @@ void receiveMessage(struct Message_t *rxMsg) {
   rxMsg->type = contentAndType & MSG_MASK;
   rxMsg->source = source;
   rxMsg->destination = getCurrentEnclaveID();
-  rxMsg->content = (contentAndType - rxMsg->type) >> SIZE_OF_MESSAGE_TYPE;
+  rxMsg->content = ((unsigned long)(contentAndType - rxMsg->type)) >> SIZE_OF_MESSAGE_TYPE; //Assuming unsigned shift.
 }

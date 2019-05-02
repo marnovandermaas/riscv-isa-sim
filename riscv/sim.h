@@ -83,8 +83,6 @@ private:
   bool mmio_store(reg_t addr, size_t len, const uint8_t* bytes);
   void make_dtb();
 
-  void make_enclave_pages();
-
   // presents a prompt for introspection into the simulation
   void interactive();
 

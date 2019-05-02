@@ -664,7 +664,7 @@ reg_t processor_t::get_csr(int which)
     for(size_t i = 0; i < num_of_mailboxes; i++) { //This should be done in parallel in hardware
       struct Message_t *message = &allMailboxes[i];
       if(message->destination == enclave_id) {
-        fprintf(stderr, "processor.cc: core %u at pc 0x%016lx found messages in box %lu, with message: source 0x%016lx, desination 0x%016lx, content 0x%016lx\n", id, state.pc, i, message->source, message->destination, message->content);
+        fprintf(stderr, "processor.cc: core %u at pc 0x%016lx found messages in box %lu, with message: source 0x%016lx, destination 0x%016lx, content 0x%016lx\n", id, state.pc, i, message->source, message->destination, message->content);
         state.arg_enclave_id = message->source; //TODO this is a security problem.
         message->destination = ENCLAVE_INVALID_ID;
         message->source = ENCLAVE_INVALID_ID;

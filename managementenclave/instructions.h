@@ -3,7 +3,7 @@
 
 #include "management.h"
 
-void switchEnclave(enclave_id_t id);
+void switchEnclaveID(enclave_id_t id);
 int* derivePhysicalCapability(struct PhysCap_t sourceCap);
 void startNormalWorld();
 CoreID_t getCoreID();

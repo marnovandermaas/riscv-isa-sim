@@ -103,6 +103,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
     //management_file.close();
     //TODO make these extra pages be local per processor.
     size_t management_memory_size = MANAGEMENT_ENCLAVE_SIZE + PGSIZE*num_enclaves; //We need to add extra pages for the stacks of the management code.
+    fprintf(stderr, "spike.cc: size 0x%lx, original size 0x%x, num enclaves 0x%lx\n", management_memory_size, MANAGEMENT_ENCLAVE_SIZE, num_enclaves);
     memory_vector[1] = std::make_pair(reg_t(MANAGEMENT_ENCLAVE_BASE), new mem_t(management_memory_size, file_size, management_array));
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
     memory_vector[0] = std::make_pair(reg_t(DRAM_BASE), new mem_t(size));
@@ -172,7 +173,7 @@ int main(int argc, char** argv)
 
   option_parser_t parser;
   parser.help(&help);
-  parser.option(0, "enclave", 1, [&](const char* s){nenclaves = atoi(s);});
+  parser.option(0, "enclave", 1, [&](const char* s){nenclaves = atoi(s) + 1;}); //TODO remove the plus one and make sure that the first enclave core is not just reserved for management stuff.
   parser.option('h', 0, 0, [&](const char* s){help();});
   parser.option('d', 0, 0, [&](const char* s){debug = true;});
   parser.option('g', 0, 0, [&](const char* s){histogram = true;});
@@ -213,7 +214,6 @@ int main(int argc, char** argv)
     help();
 
 
-  nenclaves++; //TODO remove this and make sure that the first enclave core is not just reserved for management stuff.
 
   std::unique_ptr<icache_sim_t> ics[nenclaves + 1];
   std::unique_ptr<dcache_sim_t> dcs[nenclaves + 1];

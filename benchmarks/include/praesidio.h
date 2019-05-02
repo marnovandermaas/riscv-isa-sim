@@ -3,12 +3,10 @@
 
 #include "management.h"
 #include "instructions.h"
+#include "../riscv/encoding.h"
 
 // PGSIZE (1 << 12)
-// DRAM_OFFSET (0x80000000)
-#define PAGE_TO_POINTER(NUM) ((char *) ((NUM * (1 << 12)) | (0x80000000)))
-
-typedef unsigned long enclave_id_t;
+#define PAGE_TO_POINTER(NUM) ((char *) ((NUM * (1 << 12)) | DRAM_BASE))
 
 void set_arg_id(enclave_id_t arg_id);
 
@@ -32,6 +30,5 @@ void output_char(char c);
 //Writes a whole string to display
 void output_string(char *s);
 
-int get_enclave_id();
 
 #endif //PRAESIDIO_HEADER

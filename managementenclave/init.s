@@ -6,17 +6,19 @@ entry:
   la    t2, __offset
   add   t1, t0, t1
   csrrs t0, 0x40E, zero
-  mul t2, t2, t0 #Calculate stack offset for this core's management code.
+  mul   t2, t2, t0 #Calculate stack offset for this core's management code.
   add   sp, t1, t2
-  beq t0, zero, normal
+  beq   t0, zero, normal
 
 enclave:
   call  initialize
-  jal end
+  la    t1, __offset
+  add   t2, a0, t1
+  add   sp, t2, t1 #TODO currently this assumes the stack for enclaves is always 1 page on beyond the code...
+  jalr  x0, a0, 0
 
 normal:
-  call normalWorld
-
-end:
-  la  t0, __dram
-  jalr x0, t0, 0
+  call  normalWorld
+  la    t0, __dram
+  add   sp, x0, x0 #Load zero into sp.
+  jalr  x0, t0, 0

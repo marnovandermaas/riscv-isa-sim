@@ -35,17 +35,6 @@ void donate_page(int pageNumber, enclave_id_t receiver_id) {
   );
 }
 
-int get_enclave_id() {
-  int id;
-  asm volatile( //This function reads out a system register and put the ID of the core into the id variable
-    "csrrs %0, 0xF14, zero" //CSSRS rd, mhartid, 0
-    : "=r"(id) //output
-    : //input
-    : //clobbered
-  );
-  return id;
-}
-
 //Gets base address of mailbox page from which you can receive messages from the enclave specified in sender_id.
 volatile char* get_receive_mailbox_base_address(enclave_id_t sender_id) {
   volatile char* retVal = 0;
