@@ -53,4 +53,4 @@ dump:
 	$(RV_PREFIX)objdump -D $(DEFAULTBUILD).out
 
 run:
-	spike --ic=16:1:8 --dc=16:1:8 --l2=128:1:8 -p1 --enclave=1 -m8192 $(DEFAULTBUILD).out #caches specified with sets:ways:blocks
+	spike --ic=16:1:8 --dc=16:1:8 --l2=128:1:8 -p1 --enclave=1 -m1024 $(DEFAULTBUILD).out #caches specified with sets:ways:blocks
