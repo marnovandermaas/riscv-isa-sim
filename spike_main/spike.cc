@@ -12,8 +12,6 @@
 #include <vector>
 #include <string>
 #include <memory>
-//#include <iostream>
-//#include <fstream>
 
 static void help()
 {
@@ -147,8 +145,9 @@ int main(int argc, char** argv)
   const char* ic_string = NULL;
   const char* dc_string = NULL;
   const char* llc_string = NULL;
-  std::unique_ptr<cache_sim_t> l2;
-  std::unique_ptr<partitioned_cache_sim_t> partitioned_l2;
+  const char* llc_partition_string = NULL;
+  std::unique_ptr<cache_sim_t> l2 = NULL;
+  std::unique_ptr<partitioned_cache_sim_t> partitioned_l2 = NULL;
   std::function<extension_t*()> extension;
   const char* isa = DEFAULT_ISA;
   uint16_t rbb_port = 0;
@@ -188,6 +187,7 @@ int main(int argc, char** argv)
   parser.option(0, "ic", 1, [&](const char* s){ic_string = s;});
   parser.option(0, "dc", 1, [&](const char* s){dc_string = s;});
   parser.option(0, "l2", 1, [&](const char* s){llc_string = s;});
+  parser.option(0, "l2_partitioning", 1, [&](const char* s){llc_partition_string = s;});
   parser.option(0, "isa", 1, [&](const char* s){isa = s;});
   parser.option(0, "extension", 1, [&](const char* s){extension = find_extension(s);});
   parser.option(0, "dump-dts", 0, [&](const char *s){dump_dts = true;});
@@ -218,18 +218,41 @@ int main(int argc, char** argv)
   std::unique_ptr<icache_sim_t> ics[nenclaves + 1];
   std::unique_ptr<dcache_sim_t> dcs[nenclaves + 1];
   std::unique_ptr<remapping_table_t> rmts[nenclaves + 1];
+  std::unique_ptr<cache_sim_t> static_llc[nenclaves + 1];
   icache_sim_t *ics_arg[nenclaves + 1];
   dcache_sim_t *dcs_arg[nenclaves + 1];
   remapping_table_t *rmts_arg[nenclaves + 1];
+  cache_sim_t *static_llc_arg[nenclaves + 1];
 
   size_t sets, ways, linesz;
+  #define CACHE_PARTITIONING_NONE 0
+  #define CACHE_PARTITIONING_RMT 1
+  #define CACHE_PARTITIONING_STATIC 2
+  int cache_partitioning_type = 0;
   if(llc_string) {
     if(!nenclaves) {
       l2.reset(cache_sim_t::construct(llc_string, "L2$"));
     } else {
-      fprintf(stderr, "spike.cc: Initializing partitioned cache.\n");
-      cache_sim_t::parse_config_string(llc_string, &sets, &ways, &linesz);
-      partitioned_l2.reset(new partitioned_cache_sim_t(sets*ways));
+      if(llc_partition_string) {
+        if(atoi(llc_partition_string) == CACHE_PARTITIONING_NONE) {
+          cache_partitioning_type = CACHE_PARTITIONING_NONE;
+          l2.reset(cache_sim_t::construct(llc_string, "L2$"));
+        } else if(atoi(llc_partition_string) == CACHE_PARTITIONING_RMT) {
+          cache_partitioning_type = CACHE_PARTITIONING_RMT;
+          fprintf(stderr, "spike.cc: Initializing partitioned cache.\n");
+          cache_sim_t::parse_config_string(llc_string, &sets, &ways, &linesz);
+          partitioned_l2.reset(new partitioned_cache_sim_t(sets*ways));
+        } else if(atoi(llc_partition_string) == CACHE_PARTITIONING_STATIC) {
+          cache_partitioning_type = CACHE_PARTITIONING_STATIC;
+          cache_sim_t::parse_config_string(llc_string, &sets, &ways, &linesz);
+        } else {
+          fprintf(stderr, "spike.cc: ERROR please define l2 cache partitioning scheme if you would like to use enclaves. You can do this by specifying --l2partitioning= and setting it to 0 for none, 1 for rmt or 2 for static.\n");
+          exit(-1);
+        }
+      } else {
+        fprintf(stderr, "spike.cc: ERROR please define l2 cache partitioning scheme if you would like to use enclaves. You can do this by specifying --l2partitioning= and setting it to 0 for none, 1 for rmt or 2 for static.\n");
+        exit(-1);
+      }
     }
   }
 
@@ -248,17 +271,29 @@ int main(int argc, char** argv)
     } else {
       dcs_arg[i] = NULL;
     }
-    if ( llc_string != NULL && nenclaves > 0) {
+    if ( llc_string != NULL && cache_partitioning_type == CACHE_PARTITIONING_RMT) {
       remapping_table_t *rmt = new remapping_table_t(sets, ways, linesz, "RMT", &*partitioned_l2, i);
       rmts[i].reset(rmt);
       rmts_arg[i] = rmt;
     } else {
       rmts_arg[i] = NULL;
     }
+    if ( llc_string != NULL && cache_partitioning_type == CACHE_PARTITIONING_STATIC) {
+      if(nenclaves != 2) {
+        fprintf(stderr, "spike.cc: ERROR static partitioning currently only supported for 1 enclave.\n"); //1 enclave because currently there is a dedicated enclave for management code.
+        exit(-1);
+      }
+      cache_sim_t *static_partition = new cache_sim_t(i == 0 ? sets / 2 : sets / 4,
+        ways, linesz, "SPLLC");
+      static_llc[i].reset(static_partition);
+      static_llc_arg[i] = static_partition;
+    } else {
+      static_llc_arg[i] = NULL;
+    }
   }
 
   sim_t s(isa, nprocs + nenclaves, nenclaves, halted, start_pc, mems, htif_args, std::move(hartids),
-      progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2, rmts_arg, num_of_pages);
+      progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2, rmts_arg, static_llc_arg, num_of_pages);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(new jtag_dtm_t(&s.debug_module));
   if (use_rbb) {
@@ -275,14 +310,18 @@ int main(int argc, char** argv)
   if (ic_string) {
     if(l2)
       ics[0]->set_miss_handler(&*l2);
-    if(partitioned_l2)
-      ics[0]->set_miss_handler(rmts_arg[0]);
+    else if(partitioned_l2)
+      ics[0]->set_miss_handler(&*rmts[0]);
+    else if(static_llc_arg[0])
+      ics[0]->set_miss_handler(&*static_llc[0]);
   }
   if (dc_string) {
     if(l2)
       dcs[0]->set_miss_handler(&*l2);
-    if(partitioned_l2)
-      dcs[0]->set_miss_handler(rmts_arg[0]);
+    else if(partitioned_l2)
+      dcs[0]->set_miss_handler(&*rmts[0]);
+    else if(static_llc_arg[0])
+      dcs[0]->set_miss_handler(&*static_llc[0]);
   }
   for (size_t i = 0; i < nprocs; i++)
   {
@@ -298,18 +337,20 @@ int main(int argc, char** argv)
       s.get_core(core_id)->get_mmu()->register_memtracer(&*ics[i+1]);
       if(l2) {
         ics[i+1]->set_miss_handler(&*l2);
-      }
-      if(partitioned_l2) {
+      } else if(partitioned_l2) {
         ics[i+1]->set_miss_handler(&*rmts[i+1]);
+      } else if(static_llc_arg[0]) {
+        ics[i+1]->set_miss_handler(&*static_llc[i+1]);
       }
     }
     if (dc_string) {
       s.get_core(core_id)->get_mmu()->register_memtracer(&*dcs[i+1]);
       if(l2) {
         dcs[i+1]->set_miss_handler(&*l2);
-      }
-      if(partitioned_l2) {
+      } else if(partitioned_l2) {
         dcs[i+1]->set_miss_handler(&*rmts[i+1]);
+      } else if(static_llc_arg[0]) {
+        dcs[i+1]->set_miss_handler(&*static_llc[i+1]);
       }
     }
     if (extension) s.get_core(core_id)->register_extension(extension());

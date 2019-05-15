@@ -34,7 +34,7 @@ class cache_sim_t
   virtual ~cache_sim_t();
 
   virtual void access(uint64_t addr, size_t bytes, bool store);
-  void print_stats();
+  void print_stats(bool csv_style=false);
   void set_miss_handler(cache_sim_t* mh);
 
   static cache_sim_t* construct(const char* config, const char* name);
@@ -91,7 +91,7 @@ class remapping_table_t : public cache_sim_t
 {
   public:
     remapping_table_t(size_t sets, size_t ways, size_t linesz, const char* name, partitioned_cache_sim_t* l2, enclave_id_t id); //Assuming direct mapped for now (way = 1)
-    void print_stats();
+    void print_stats(bool csv_style=false);
     virtual void access(uint64_t addr, size_t bytes, bool store);
   private:
     partitioned_cache_sim_t *llc;
@@ -134,8 +134,8 @@ class cache_memtracer_t : public memtracer_t
     cache->set_miss_handler(mh);
   }
 
-  void print_stats() {
-    cache->print_stats();
+  void print_stats(bool csv_style=false) {
+    cache->print_stats(csv_style);
   }
 
  protected:

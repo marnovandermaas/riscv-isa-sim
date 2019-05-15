@@ -80,7 +80,7 @@ cache_sim_t::~cache_sim_t()
   delete [] tags;
 }
 
-void cache_sim_t::print_stats()
+void cache_sim_t::print_stats(bool csv_style)
 {
   if(read_accesses + write_accesses == 0) {
     std::cout << name << " ";
@@ -91,22 +91,33 @@ void cache_sim_t::print_stats()
   float mr = 100.0f*(read_misses+write_misses)/(read_accesses+write_accesses);
 
   std::cout << std::setprecision(3) << std::fixed;
-  std::cout << name << " ";
-  std::cout << "Bytes Read:            " << bytes_read << std::endl;
-  std::cout << name << " ";
-  std::cout << "Bytes Written:         " << bytes_written << std::endl;
-  std::cout << name << " ";
-  std::cout << "Read Accesses:         " << read_accesses << std::endl;
-  std::cout << name << " ";
-  std::cout << "Write Accesses:        " << write_accesses << std::endl;
-  std::cout << name << " ";
-  std::cout << "Read Misses:           " << read_misses << std::endl;
-  std::cout << name << " ";
-  std::cout << "Write Misses:          " << write_misses << std::endl;
-  std::cout << name << " ";
-  std::cout << "Writebacks:            " << writebacks << std::endl;
-  std::cout << name << " ";
-  std::cout << "Miss Rate:             " << mr << '%' << std::endl;
+  if(csv_style) {
+    std::cout <<  bytes_read << ", " <<
+                  bytes_written << ", " <<
+                  read_accesses << ", " <<
+                  write_accesses << ", " <<
+                  read_misses << ", " <<
+                  write_misses << ", " <<
+                  writebacks << ", " <<
+                  mr << ", ";
+  } else {
+    std::cout << name << " ";
+    std::cout << "Bytes Read:            " << bytes_read << std::endl;
+    std::cout << name << " ";
+    std::cout << "Bytes Written:         " << bytes_written << std::endl;
+    std::cout << name << " ";
+    std::cout << "Read Accesses:         " << read_accesses << std::endl;
+    std::cout << name << " ";
+    std::cout << "Write Accesses:        " << write_accesses << std::endl;
+    std::cout << name << " ";
+    std::cout << "Read Misses:           " << read_misses << std::endl;
+    std::cout << name << " ";
+    std::cout << "Write Misses:          " << write_misses << std::endl;
+    std::cout << name << " ";
+    std::cout << "Writebacks:            " << writebacks << std::endl;
+    std::cout << name << " ";
+    std::cout << "Miss Rate:             " << mr << '%' << std::endl;
+  }
 }
 
 uint64_t* cache_sim_t::check_tag(uint64_t addr)
@@ -193,7 +204,7 @@ void remapping_table_t::access(uint64_t addr, size_t bytes, bool store)
     {
       //This means we have had a hit in the RMT.
       if(llc == NULL) {
-        fprintf(stderr, "remappint_table_t: ERROR LLC is null, aborting.\n");
+        fprintf(stderr, "remapping_table_t: ERROR LLC is null, aborting.\n");
         exit(-1);
       }
       bool hit = llc->access(slots[index], addr, enclave_id);
@@ -212,7 +223,7 @@ void remapping_table_t::access(uint64_t addr, size_t bytes, bool store)
       store ? llc_write_misses++ : llc_read_misses++; //This keeps track of the LLC specific misses.
       victim = victimize(addr, index);
     } else {
-      //This means there was a miss in the RMT or a missin the LLC
+      //This means there was a miss in the RMT (not sure if it was in the LLC or not.)
       store ? write_misses++ : read_misses++;
 
       victim = victimize(addr);
@@ -265,19 +276,22 @@ uint64_t remapping_table_t::victimize(uint64_t addr, size_t index)
     return victim;
 }
 
-void remapping_table_t::print_stats()
+void remapping_table_t::print_stats(bool csv_style)
 {
-  cache_sim_t::print_stats();
+  cache_sim_t::print_stats(csv_style);
   if(read_accesses + write_accesses == 0) {
     std::cout << name << " ";
     std::cout << "No stats recorded" << std::endl;
     return;
   }
-
-  std::cout << name << " ";
-  std::cout << "Read Misses in LLC:          " << llc_read_misses << std::endl;
-  std::cout << name << " ";
-  std::cout << "Write Misses in LLC:            " << llc_write_misses << std::endl;
+  if(csv_style) {
+    std::cout << llc_read_misses << ", " << llc_write_misses;
+  } else {
+    std::cout << name << " ";
+    std::cout << "Read Misses in LLC:          " << llc_read_misses << std::endl;
+    std::cout << name << " ";
+    std::cout << "Write Misses in LLC:            " << llc_write_misses << std::endl;
+  }
 }
 
 partitioned_cache_sim_t::partitioned_cache_sim_t(size_t slots)
