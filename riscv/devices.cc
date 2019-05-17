@@ -7,7 +7,7 @@ void bus_t::add_device(reg_t addr, abstract_device_t* dev)
   // container to sort the keys and provide ordered
   // iteration over this sort, which it does. (python's
   // SortedDict is a good analogy)
-  fprintf(stderr, "devices.cc: adding device with host address 0x%0lx with base 0x%0lx\n", dev, addr);
+  //fprintf(stderr, "devices.cc: adding device with host address 0x%0lx with base 0x%0lx\n", dev, addr);
   devices[addr] = dev;
 }
 

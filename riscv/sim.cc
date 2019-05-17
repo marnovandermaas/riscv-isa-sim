@@ -82,7 +82,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
              std::vector<std::pair<reg_t, mem_t*>> mems,
              const std::vector<std::string>& args,
              std::vector<int> const hartids, unsigned progsize,
-             unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, cache_sim_t *l2, remapping_table_t **rmts, cache_sim_t **static_llc, reg_t num_of_pages)
+             unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, cache_sim_t *l2, remapping_table_t **rmts, cache_sim_t **static_llc, struct Message_t *mailboxes, size_t num_of_mailboxes, reg_t num_of_pages)
   : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), nenclaves(nenclaves),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
@@ -96,15 +96,6 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
   {
     page_owners[i].owner = ENCLAVE_DEFAULT_ID;
     page_owners[i].reader = ENCLAVE_INVALID_ID;
-  }
-
-  size_t num_of_mailboxes = nenclaves + 1;
-  struct Message_t mailboxes[num_of_mailboxes]; //One mailbox per enclave including one for the normal worls
-
-  for(size_t i = 0; i < num_of_mailboxes; i++) {
-    mailboxes[i].source = ENCLAVE_INVALID_ID;
-    mailboxes[i].destination = ENCLAVE_INVALID_ID;
-    mailboxes[i].content = 0;
   }
 
   for (auto& x : mems)

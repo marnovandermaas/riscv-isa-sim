@@ -670,6 +670,8 @@ reg_t processor_t::get_csr(int which)
         message->destination = ENCLAVE_INVALID_ID;
         message->source = ENCLAVE_INVALID_ID;
         return message->content;
+      } else if (message->destination != ENCLAVE_INVALID_ID) {
+        //fprintf(stderr, "processor.cc: Warning! enclave 0x%0lx message found but with wrong destintation identifier 0x%0lx\n", enclave_id, message->destination);
       }
     }
     state.arg_enclave_id = ENCLAVE_INVALID_ID;
