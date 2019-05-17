@@ -323,9 +323,15 @@ void sim_t::make_dtb()
 
 char* sim_t::addr_to_mem(reg_t addr) {
   auto desc = bus.find_device(addr);
-  if (auto mem = dynamic_cast<mem_t*>(desc.second))
-    if (addr - desc.first < mem->size())
+  //fprintf(stderr, "sim.cc: physical addr 0x%0lx is found on device with base 0x%0lx and host addres 0x%0lx\n", addr, desc.first, desc.second);
+  abstract_mem_t *mem = (abstract_mem_t *) desc.second;
+  if (mem) {
+    if (addr - desc.first < mem->size()) {
       return mem->contents() + (addr - desc.first);
+    }
+  }
+  fprintf(stderr, "sim.cc: ERROR returning NULL for address to memory.\n");
+  exit(-1);
   return NULL;
 }
 

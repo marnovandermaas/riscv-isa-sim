@@ -14,6 +14,14 @@ class abstract_device_t {
   virtual bool load(reg_t addr, size_t len, uint8_t* bytes) = 0;
   virtual bool store(reg_t addr, size_t len, const uint8_t* bytes) = 0;
   virtual ~abstract_device_t() {}
+  char* contents() {
+    fprintf(stderr, "devices.h: ERROR contents() exiting.\n");
+    exit(-1);
+  }
+  size_t size() {
+    fprintf(stderr, "devices.h: ERROR size() exiting.\n");
+    exit(-1);
+  }
 };
 
 class bus_t : public abstract_device_t {
@@ -28,24 +36,34 @@ class bus_t : public abstract_device_t {
   std::map<reg_t, abstract_device_t*> devices;
 };
 
-class rom_device_t : public abstract_device_t {
+class abstract_mem_t : public abstract_device_t {
+public:
+  char* contents() { return data; }
+  size_t size() { return len; }
+protected:
+  char* data;
+  size_t len;
+};
+
+class rom_device_t : public abstract_mem_t {
  public:
   rom_device_t(std::vector<char> data);
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
-  const std::vector<char>& contents() { return data; }
- private:
-  std::vector<char> data;
 };
 
-class mem_t : public abstract_device_t {
+class mem_t : public abstract_mem_t {
  public:
-  mem_t(size_t size) : len(size) {
-    if (!size)
+  mem_t(size_t size) {
+    len = size;
+    if (!size) {
       throw std::runtime_error("zero bytes of target memory requested");
+    }
     data = (char*)calloc(1, size);
-    if (!data)
+    fprintf(stderr, "devices.h: initializing mem_t with size 0x%0lx and host address 0x%0lx\n", size, data);
+    if (!data) {
       throw std::runtime_error("couldn't allocate " + std::to_string(size) + " bytes of target memory");
+    }
   }
   //This constructor initializes data with the content of initial_data up to length.
   mem_t(size_t size, size_t length, char *initial_data) : mem_t(size) {
@@ -63,12 +81,6 @@ class mem_t : public abstract_device_t {
 
   bool load(reg_t addr, size_t len, uint8_t* bytes) { return false; }
   bool store(reg_t addr, size_t len, const uint8_t* bytes) { return false; }
-  char* contents() { return data; }
-  size_t size() { return len; }
-
- private:
-  char* data;
-  size_t len;
 };
 
 class clint_t : public abstract_device_t {

@@ -51,13 +51,16 @@ reg_t mmu_t::translate(reg_t addr, access_type type)
 tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr)
 {
   reg_t paddr = translate(vaddr, FETCH);
-
-  if (auto host_addr = sim->addr_to_mem(paddr)) {
+  auto host_addr = sim->addr_to_mem(paddr);
+  fprintf(stderr, "mmu.cc: fetch slow path: vaddr 0x%0lx, paddr 0x%0lx, haddr 0x%0lx\n", vaddr, paddr, host_addr);
+  if (host_addr) {
+    fprintf(stderr, "mmu.cc: refilling TLB.\n");
     return refill_tlb(vaddr, paddr, host_addr, FETCH);
   } else {
     if (!sim->mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp))
       throw trap_instruction_access_fault(vaddr);
     tlb_entry_t entry = {(char*)&fetch_temp - vaddr, paddr - vaddr};
+    fprintf(stderr, "mmu.cc: magicing entry host offset 0x%0lx target offset 0x%0lx\n", entry.host_offset, entry.target_offset);
     return entry;
   }
 }
@@ -251,7 +254,7 @@ fail_access:
   switch (type) {
     case FETCH: throw trap_instruction_access_fault(addr);
     case LOAD: throw trap_load_access_fault(addr);
-    case STORE: 
+    case STORE:
       fprintf(stderr, "mmu.cc: throwing trap store access fault in page walk.\n");
       throw trap_store_access_fault(addr);
     default: abort();

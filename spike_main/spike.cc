@@ -101,9 +101,11 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
     //management_file.close();
     //TODO make these extra pages be local per processor.
     size_t management_memory_size = MANAGEMENT_ENCLAVE_SIZE + PGSIZE*num_enclaves; //We need to add extra pages for the stacks of the management code.
-    fprintf(stderr, "spike.cc: size 0x%lx, original size 0x%x, num enclaves 0x%lx\n", management_memory_size, MANAGEMENT_ENCLAVE_SIZE, num_enclaves);
+    fprintf(stderr, "spike.cc: size 0x%lx, original size 0x%x, num enclaves 0x%lx at base: 0x%lx\n", management_memory_size, MANAGEMENT_ENCLAVE_SIZE, num_enclaves, MANAGEMENT_ENCLAVE_BASE);
     memory_vector[1] = std::make_pair(reg_t(MANAGEMENT_ENCLAVE_BASE), new mem_t(management_memory_size, file_size, management_array));
+    free(management_array);
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
+    fprintf(stderr, "spike.cc: making working memory at base: 0x%0lx\n", DRAM_BASE);
     memory_vector[0] = std::make_pair(reg_t(DRAM_BASE), new mem_t(size));
     return memory_vector;
   }
@@ -111,22 +113,22 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
   fprintf(stderr, "spike.cc: ERROR currently preasidio does not support multiple mapped working memories.\n");
   exit(-1);
   // handle base/size tuples
-  std::vector<std::pair<reg_t, mem_t*>> res;
-  while (true) {
-    auto base = strtoull(arg, &p, 0);
-    if (!*p || *p != ':')
-      help();
-    auto size = strtoull(p + 1, &p, 0);
-    if ((size | base) % PGSIZE != 0)
-      help();
-    res.push_back(std::make_pair(reg_t(base), new mem_t(size)));
-    if (!*p)
-      break;
-    if (*p != ',')
-      help();
-    arg = p + 1;
-  }
-  return res;
+  // std::vector<std::pair<reg_t, mem_t*>> res;
+  // while (true) {
+  //   auto base = strtoull(arg, &p, 0);
+  //   if (!*p || *p != ':')
+  //     help();
+  //   auto size = strtoull(p + 1, &p, 0);
+  //   if ((size | base) % PGSIZE != 0)
+  //     help();
+  //   res.push_back(std::make_pair(reg_t(base), new mem_t(size)));
+  //   if (!*p)
+  //     break;
+  //   if (*p != ',')
+  //     help();
+  //   arg = p + 1;
+  // }
+  // return res;
 }
 
 int main(int argc, char** argv)
@@ -146,8 +148,8 @@ int main(int argc, char** argv)
   const char* dc_string = NULL;
   const char* llc_string = NULL;
   const char* llc_partition_string = NULL;
-  std::unique_ptr<cache_sim_t> l2 = NULL;
-  std::unique_ptr<partitioned_cache_sim_t> partitioned_l2 = NULL;
+  std::unique_ptr<cache_sim_t> l2;
+  std::unique_ptr<partitioned_cache_sim_t> partitioned_l2;
   std::function<extension_t*()> extension;
   const char* isa = DEFAULT_ISA;
   uint16_t rbb_port = 0;

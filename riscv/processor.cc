@@ -336,6 +336,7 @@ int processor_t::paddr_bits()
 
 void processor_t::set_csr(int which, reg_t val)
 {
+  //fprintf(stderr, "Processor_t: Setting CSR 0x%x, to value %lu.\n", which, val);
   val = zext_xlen(val);
   reg_t delegable_ints = MIP_SSIP | MIP_STIP | MIP_SEIP
                        | ((ext != NULL) << IRQ_COP);
