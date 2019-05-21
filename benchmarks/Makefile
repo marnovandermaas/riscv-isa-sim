@@ -2,28 +2,29 @@ RV_PREFIX = riscv64-unknown-elf-#Prefix for our RISC-V tools (e.g. gcc and objdu
 CC = $(RV_PREFIX)gcc #Our compiler
 INCLUDE_DIR = include
 BUILD_DIR = build
-MANAGE_DIR = ../managementenclave/
+MANAGE_DIR = ../managementenclave
 CCFLAGS = -nostdlib -mcmodel=medany -T$(INCLUDE_DIR)/link.ld #Flags telling GCC to compile without libraries (e.g. baremetal), to use a differen memory model so that we can put our code at 0x80000000 and to use the specified linker script.
 DEPS = init praesidio
 
 CCFLAGS += -I$(MANAGE_DIR)
 
-LIBCFLAGS = $(CCFLAGS) -I$(MANAGE_DIR)/include
-
 LIBC_DIR = $(MANAGE_DIR)/nolibc
+
+LIBCFLAGS = $(CCFLAGS) -I$(MANAGE_DIR)/include -I$(LIBC_DIR)/include -Wall -Werror -Wno-parentheses#-O2 -std=c99 -Wall  -Werror
+
 
 Enclave_Link_Flags=-L$(BUILD_DIR) 
 
 OBJS=$(BUILD_DIR)/init.o $(BUILD_DIR)/praesidio.o $(BUILD_DIR)/instructions.o  $(BUILD_DIR)/hello.o
 
-LIBC_OBJS=$(LIBC_DIR)/ctype.o 
-    # $(LIBC_DIR)/dtoa.o /
-	# $(LIBC_DIR)/float.o /
-     #$(LIBC_DIR)/ memchr.o $(LIBC_DIR)/memcmp.o $(LIBC_DIR)/memcpy.o $(LIBC_DIR)/memmove.o $(LIBC_DIR)/memset.o /
-     #$(LIBC_DIR)/strcmp.o $(LIBC_DIR)/strlen.o $(LIBC_DIR)/strtol.o $(LIBC_DIR)/strchr.o $(LIBC_DIR)/strchrnul.o $(LIBC_DIR)/strncpy.o $(LIBC_DIR)/stpncpy.o /
-     #$(LIBC_DIR)/strstr.o /
-     #$(LIBC_DIR)/stubs.o /
-     #$(LIBC_DIR)/vfprintf.o $(LIBC_DIR)/vsnprintf.o $(LIBC_DIR)/snprintf.o $(LIBC_DIR)/fprintf.o $(LIBC_DIR)/printf.o
+LIBC_OBJS=$(BUILD_DIR)/ctype.o \
+    $(BUILD_DIR)/dtoa.o  \
+	 $(BUILD_DIR)/float.o \
+     $(BUILD_DIR)/memchr.o $(BUILD_DIR)/memcmp.o $(BUILD_DIR)/memcpy.o $(BUILD_DIR)/memmove.o $(BUILD_DIR)/memset.o \
+     $(BUILD_DIR)/strcmp.o $(BUILD_DIR)/strlen.o $(BUILD_DIR)/strtol.o $(BUILD_DIR)/strchr.o $(BUILD_DIR)/strchrnul.o $(BUILD_DIR)/strncpy.o $(BUILD_DIR)/stpncpy.o \
+     $(BUILD_DIR)/strstr.o \
+     $(BUILD_DIR)/stubs.o \
+     $(BUILD_DIR)/vfprintf.o $(BUILD_DIR)/vsnprintf.o $(BUILD_DIR)/snprintf.o $(BUILD_DIR)/fprintf.o $(BUILD_DIR)/printf.o $(BUILD_DIR)/sysdeps_riscv.o $(BUILD_DIR)/riscv_spec.o
 
 
 DEFAULTBUILD = hello
@@ -48,21 +49,20 @@ $(BUILD_DIR)/%.o: $(MANAGE_DIR)/%.c
 	@echo "CC   <=  $<"
 
 
-$(LIBC_DIR)/%.o: $(LIBC_DIR)/%.c
-	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+$(BUILD_DIR)/%.o: $(LIBC_DIR)/%.c
+	@$(CC) $(LIBCFLAGS) -c $< -o $@
 	@echo "CC   <=  $<"
 
 $(LIBC_DIR)/dtoa.o: LIBCFLAGS+=-fno-strict-aliasing
 
 
-$(DEFAULTBUILD): $(OBJS) 
-	@$(CC) $(CCFLAGS) $^ -o $@ $(Enclave_Link_Flags) 
-	
+$(DEFAULTBUILD): $(OBJS) $(LIBC_OBJS)
+	@$(CC) $(LIBCFLAGS) $^ -o $@ $(Enclave_Link_Flags) 	
 	@echo "LINK =>  $@"
 
 #Remove .out and .o files
 clean:
-	rm *.out $(BUILD_DIR)/*.o
+	rm -rf $(DEFAULTBUILD) $(BUILD_DIR)/*.o
 
 #For debugging purposes and objdump of our output file.
 dump:
