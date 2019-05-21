@@ -1,4 +1,7 @@
 #include "include/praesidio.h"
+#include <string.h>
+#include <stdint.h>
+#include <limits.h>
 
 #define INPUT_LEN (10)
 #define OUTPUT_LEN (16)
@@ -98,6 +101,18 @@ int main() {
   outString[5] = idChar; //Set the second space to the idChar
   output_string(outString); //Output the string.
 
+
+   const char src[50] = "this is from src\n";
+   char dest[50];
+   strncpy(dest,src, strlen(src));
+   output_string(dest);
+   //output_string("Before memcpy dest = %s\n", dest);
+   //memcpy(dest, src, strlen(src)+1);
+   //output_string("After memcpy dest = %s\n", dest);
+   
+   return(0);
+/* ZTODO: it breaks after that
+
   if(id == ENCLAVE_DEFAULT_ID) {
     normal_world();
   } else if (id == 1) {
@@ -105,4 +120,6 @@ int main() {
   } else {
     //Do nothing if you are any other enclave.
   }
+
+  */
 }
