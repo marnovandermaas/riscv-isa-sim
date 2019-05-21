@@ -8,8 +8,6 @@
 // PGSIZE (1 << 12)
 #define PAGE_TO_POINTER(NUM) ((char *) ((NUM * (1 << 12)) | DRAM_BASE))
 
-void set_arg_id(enclave_id_t arg_id);
-
 void give_read_permission(int pageNumber, enclave_id_t receiver_id);
 
 void donate_page(int pageNumber, enclave_id_t receiver_id);
@@ -29,6 +27,8 @@ void output_char(char c);
 
 //Writes a whole string to display
 void output_string(char *s);
+
+enclave_id_t start_enclave(char *source_page, unsigned int num_donated_pages, char **array_of_page_addresses);
 
 
 #endif //PRAESIDIO_HEADER

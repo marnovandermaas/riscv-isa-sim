@@ -12,48 +12,13 @@ void normal_world() {
   char *input = PAGE_TO_POINTER(page_num);
   char read_buffer[OUTPUT_LEN];
 
-  struct Message_t message;
-  struct Message_t response;
-  message.source = ENCLAVE_DEFAULT_ID;
-  message.destination = ENCLAVE_MANAGEMENT_ID;
-  message.type = MSG_CREATE_ENCLAVE;
-  message.content = 0;
-  sendMessage(&message);
   char *enclaveMemory = (char *) DRAM_BASE + 3*PAGE_SIZE;
-  for(int i = 0; i < PAGE_SIZE; i++) {
-    enclaveMemory[i] = ((char *) DRAM_BASE)[i];
-  }
-  do {
-    receiveMessage(&response);
-  } while(response.source != ENCLAVE_MANAGEMENT_ID);
-  enclave_id_t myEnclave = response.content;
-  message.type = MSG_SET_ARGUMENT;
-  message.content = myEnclave;
-  sendMessage(&message);
-  do {
-    receiveMessage(&response);
-  } while(response.source != ENCLAVE_MANAGEMENT_ID);
-  message.type = MSG_DONATE_PAGE;
-  message.content = enclaveMemory; //This is the page for enclave memory
-  sendMessage(&message);
-  do {
-    receiveMessage(&response);
-  } while(response.source != ENCLAVE_MANAGEMENT_ID);
-  message.type = MSG_DONATE_PAGE;
-  message.content = enclaveMemory + PAGE_SIZE; //This is the page for enclave stack
-  sendMessage(&message);
-  do {
-    receiveMessage(&response);
-  } while(response.source != ENCLAVE_MANAGEMENT_ID);
-  message.type = MSG_DONATE_PAGE;
-  message.content = enclaveMemory + 2*PAGE_SIZE; //This is the page for sharing with the normal world
-  sendMessage(&message);
-  do {
-    receiveMessage(&response);
-  } while(response.source != ENCLAVE_MANAGEMENT_ID);
-  message.type = MSG_SWITCH_ENCLAVE;
-  message.content = myEnclave;
-  sendMessage(&message);
+  char *enclavePages[3];
+  enclavePages[0] = enclaveMemory;
+  enclavePages[1] = enclaveMemory + PAGE_SIZE;
+  enclavePages[2] = enclaveMemory + 2*PAGE_SIZE;
+  enclave_id_t myEnclave = start_enclave((char *) DRAM_BASE, 3, enclavePages);
+  if(myEnclave == ENCLAVE_INVALID_ID) return;
 
   give_read_permission(page_num, myEnclave);
   address = get_receive_mailbox_base_address(myEnclave);

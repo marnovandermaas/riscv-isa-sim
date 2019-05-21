@@ -3,19 +3,10 @@
 #define READY_SIGNAL (0xAB)
 #define BUSY_SIGNAL (0xBA) //Must be different from READY_SIGNAL
 
-void set_arg_id(enclave_id_t arg_id) {
-  asm volatile (
-    "csrrw zero, 0x40D, %0"
-    :
-    : "r"(arg_id)
-    :
-  );
-}
-
 //Sets read access to a page to an enclave
 void give_read_permission(int pageNumber, enclave_id_t receiver_id) {
   PAGE_TO_POINTER(pageNumber)[0] = BUSY_SIGNAL;
-  set_arg_id(receiver_id);
+  setArgumentEnclaveIdentifier(receiver_id);
   asm volatile (
     "csrrw zero, 0x40A, %0"
     :
@@ -26,7 +17,7 @@ void give_read_permission(int pageNumber, enclave_id_t receiver_id) {
 
 //Donates a page to another enclave
 void donate_page(int pageNumber, enclave_id_t receiver_id) {
-  set_arg_id(receiver_id);
+  setArgumentEnclaveIdentifier(receiver_id);
   asm volatile (
     "csrrw zero, 0x40C, %0"
     :
@@ -38,7 +29,7 @@ void donate_page(int pageNumber, enclave_id_t receiver_id) {
 //Gets base address of mailbox page from which you can receive messages from the enclave specified in sender_id.
 volatile char* get_receive_mailbox_base_address(enclave_id_t sender_id) {
   volatile char* retVal = 0;
-  set_arg_id(sender_id);
+  setArgumentEnclaveIdentifier(sender_id);
   do {
     asm volatile (
       "csrrs %0, 0x40B, %0"
@@ -119,4 +110,53 @@ void output_string(char *s) {
     output_char(s[i]);
     i++;
   }
+}
+
+
+enclave_id_t start_enclave(char *source_page, unsigned int num_donated_pages, char **array_of_page_addresses) {
+  if(num_donated_pages != 3) {
+    return ENCLAVE_INVALID_ID;
+  }
+  struct Message_t message;
+  struct Message_t response;
+  message.source = getCurrentEnclaveID();
+  message.destination = ENCLAVE_MANAGEMENT_ID;
+  message.type = MSG_CREATE_ENCLAVE;
+  message.content = 0;
+  sendMessage(&message);
+  for(int i = 0; i < PAGE_SIZE; i++) {
+    array_of_page_addresses[0][i] = source_page[i];
+  }
+  do {
+    receiveMessage(&response);
+  } while(response.source != ENCLAVE_MANAGEMENT_ID);
+  enclave_id_t myEnclave = response.content;
+  message.type = MSG_SET_ARGUMENT;
+  message.content = myEnclave;
+  sendMessage(&message);
+  do {
+    receiveMessage(&response);
+  } while(response.source != ENCLAVE_MANAGEMENT_ID);
+  message.type = MSG_DONATE_PAGE;
+  message.content = (unsigned long) array_of_page_addresses[0]; //TODO enclaveMemory; //This is the page for enclave memory
+  sendMessage(&message);
+  do {
+    receiveMessage(&response);
+  } while(response.source != ENCLAVE_MANAGEMENT_ID);
+  message.type = MSG_DONATE_PAGE;
+  message.content = (unsigned long) array_of_page_addresses[1]; //TODO enclaveMemory + PAGE_SIZE; //This is the page for enclave stack
+  sendMessage(&message);
+  do {
+    receiveMessage(&response);
+  } while(response.source != ENCLAVE_MANAGEMENT_ID);
+  message.type = MSG_DONATE_PAGE;
+  message.content = (unsigned long) array_of_page_addresses[2]; //TODO + 2*PAGE_SIZE; //This is the page for sharing with the normal world
+  sendMessage(&message);
+  do {
+    receiveMessage(&response);
+  } while(response.source != ENCLAVE_MANAGEMENT_ID);
+  message.type = MSG_SWITCH_ENCLAVE;
+  message.content = myEnclave;
+  sendMessage(&message);
+  return myEnclave;
 }
