@@ -2,11 +2,17 @@
 #include <string.h>
 #include <stdint.h>
 #include <limits.h>
-#include "stdio.h"
+#include <stdio.h>
 
 #define INPUT_LEN (10)
 #define OUTPUT_LEN (16)
 #define NUMBER_OF_NAMES (10)
+
+#define __stdin 1
+#define __stdout 2 
+#define __stderr 3
+#define fprintf fprintf_temp
+
 
 void normal_world() {
   //This is the code that runs in the normal world.
@@ -105,18 +111,18 @@ int main() {
 
    const char src[50] = "this is from src!";
    char dest[50];
-   //strncpy(dest,src, strlen(src));
-   //output_string(dest);
-   //output_string("Before memcpy dest = %s\n", dest);
+   strncpy(dest,src, strlen(src));
+   output_string(dest);
+   printf("Before memcpy dest = %s\n", dest);
    memcpy(dest, src, strlen(src)+1);
    printf("heyyyy %s and %d \n",dest, 1234);
+   fprintf(__stderr,"hey again%d\n", 1234);
 
-    //output_string(dest);
 
 
-   //return(0);
+  // return(0);
 /* ZTODO: it breaks after that */
-/*
+
   if(id == ENCLAVE_DEFAULT_ID) {
     normal_world();
   } else if (id == 1) {
@@ -124,6 +130,6 @@ int main() {
   } else {
     //Do nothing if you are any other enclave.
   }
-*/
+
   
 }
