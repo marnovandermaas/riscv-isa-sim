@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <limits.h>
+#include "stdio.h"
 
 #define INPUT_LEN (10)
 #define OUTPUT_LEN (16)
@@ -102,17 +103,20 @@ int main() {
   output_string(outString); //Output the string.
 
 
-   const char src[50] = "this is from src\n";
+   const char src[50] = "this is from src!";
    char dest[50];
-   strncpy(dest,src, strlen(src));
-   output_string(dest);
+   //strncpy(dest,src, strlen(src));
+   //output_string(dest);
    //output_string("Before memcpy dest = %s\n", dest);
-   //memcpy(dest, src, strlen(src)+1);
-   //output_string("After memcpy dest = %s\n", dest);
-   
-   return(0);
-/* ZTODO: it breaks after that
+   memcpy(dest, src, strlen(src)+1);
+   printf("heyyyy %s and %d \n",dest, 1234);
 
+    //output_string(dest);
+
+
+   //return(0);
+/* ZTODO: it breaks after that */
+/*
   if(id == ENCLAVE_DEFAULT_ID) {
     normal_world();
   } else if (id == 1) {
@@ -120,6 +124,6 @@ int main() {
   } else {
     //Do nothing if you are any other enclave.
   }
-
-  */
+*/
+  
 }
