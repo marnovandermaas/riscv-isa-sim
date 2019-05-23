@@ -56,54 +56,57 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
       throw std::runtime_error("Size would overflow size_t");
     *num_of_pages = size / PGSIZE;
     if ((size % PGSIZE) != 0) *num_of_pages++;
+    int num_mems = 1;
 
 #ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-    int num_mems = 2;
-#else
-    int num_mems = 1;
+    if (num_enclaves > 0) {
+      num_mems = 2;
+    }
 #endif
     fprintf(stderr, "spike.cc: creating vector with %d elements.\n", num_mems);
     std::vector<std::pair<reg_t, mem_t*>> memory_vector = std::vector<std::pair<reg_t, mem_t*>>(num_mems, std::make_pair(reg_t(0), (mem_t *) NULL));
 
 #ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-    //This initializes the memory enclave memory device (4 pages in size for now)
-    FILE *management_file;
-    management_file = fopen("../build/management.bin", "rb");
-    if(management_file == NULL) {
-      fprintf(stderr, "spike.cc: could not open management file.\n");
-      exit(-1);
-    }
-    size_t file_size = PGSIZE;
-    char *management_array = (char *) calloc(file_size, sizeof(char));
-    size_t file_status;
-    for(size_t i = 0; i < PGSIZE; i++) {
-      file_status = fread(&management_array[i], sizeof(char), 1, management_file);
-      //fprintf(stderr, "%02x ", management_array[i] & 0xFF); //Need to &0xFF because otherwise C will sign extend values.
-      if (file_status != 1) {
-        fprintf(stderr, "spike.cc: read management binary with %lu amount of Bytes, ferror: %d, feof: %d\n", i, ferror(management_file), feof(management_file));
-        if(ferror(management_file) || !feof(management_file))
-        {
-          fprintf(stderr, "spike.cc: error in reading file.\n");
-          exit(-1);
-        }
-        break;
+    if (num_enclaves > 0) {
+      //This initializes the memory enclave memory device (4 pages in size for now)
+      FILE *management_file;
+      management_file = fopen("../build/management.bin", "rb");
+      if(management_file == NULL) {
+        fprintf(stderr, "spike.cc: could not open management file.\n");
+        exit(-1);
       }
+      size_t file_size = PGSIZE;
+      char *management_array = (char *) calloc(file_size, sizeof(char));
+      size_t file_status;
+      for(size_t i = 0; i < PGSIZE; i++) {
+        file_status = fread(&management_array[i], sizeof(char), 1, management_file);
+        //fprintf(stderr, "%02x ", management_array[i] & 0xFF); //Need to &0xFF because otherwise C will sign extend values.
+        if (file_status != 1) {
+          fprintf(stderr, "spike.cc: read management binary with %lu amount of Bytes, ferror: %d, feof: %d\n", i, ferror(management_file), feof(management_file));
+          if(ferror(management_file) || !feof(management_file))
+          {
+            fprintf(stderr, "spike.cc: error in reading file.\n");
+            exit(-1);
+          }
+          break;
+        }
+      }
+      //Example using io streams:
+      //std::ifstream management_file ("management.bin", std::ios::in|std::ios::binary);
+      //if(!management_file.good()) {
+      //  fprintf(stderr, "spike.cc: could not open management file.\n");
+      //  exit(-1);
+      //}
+      //size_t file_size = PGSIZE;
+      //char *memblock = (char *) calloc(file_size, sizeof(char));
+      //management_file.read(memblock, file_size);
+      //management_file.close();
+      //TODO make these extra pages be local per processor.
+      size_t management_memory_size = MANAGEMENT_ENCLAVE_SIZE + PGSIZE*num_enclaves; //We need to add extra pages for the stacks of the management code.
+      //fprintf(stderr, "spike.cc: size 0x%lx, original size 0x%x, num enclaves 0x%lx at base: 0x%lx\n", management_memory_size, MANAGEMENT_ENCLAVE_SIZE, num_enclaves, MANAGEMENT_ENCLAVE_BASE);
+      memory_vector[1] = std::make_pair(reg_t(MANAGEMENT_ENCLAVE_BASE), new mem_t(management_memory_size, file_size, management_array));
+      free(management_array);
     }
-    //Example using io streams:
-    //std::ifstream management_file ("management.bin", std::ios::in|std::ios::binary);
-    //if(!management_file.good()) {
-    //  fprintf(stderr, "spike.cc: could not open management file.\n");
-    //  exit(-1);
-    //}
-    //size_t file_size = PGSIZE;
-    //char *memblock = (char *) calloc(file_size, sizeof(char));
-    //management_file.read(memblock, file_size);
-    //management_file.close();
-    //TODO make these extra pages be local per processor.
-    size_t management_memory_size = MANAGEMENT_ENCLAVE_SIZE + PGSIZE*num_enclaves; //We need to add extra pages for the stacks of the management code.
-    //fprintf(stderr, "spike.cc: size 0x%lx, original size 0x%x, num enclaves 0x%lx at base: 0x%lx\n", management_memory_size, MANAGEMENT_ENCLAVE_SIZE, num_enclaves, MANAGEMENT_ENCLAVE_BASE);
-    memory_vector[1] = std::make_pair(reg_t(MANAGEMENT_ENCLAVE_BASE), new mem_t(management_memory_size, file_size, management_array));
-    free(management_array);
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
     fprintf(stderr, "spike.cc: making working memory at base: 0x%0x\n", DRAM_BASE);
     memory_vector[0] = std::make_pair(reg_t(DRAM_BASE), new mem_t(size));

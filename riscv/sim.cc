@@ -263,12 +263,12 @@ void sim_t::make_dtb()
   const int reset_vec_size = 8;
 
   if(start_pc == reg_t(-1)) {
+    start_pc = get_entry_point(); //This is the get_entry_point function of htif_t found in riscv fesvr
 #ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
     //TODO add the entry point to the management enclave code instead of hardcoding it.
-    //start_pc = get_entry_point(); //This is the get_entry_point function of htif_t found in riscv fesvr
-    start_pc = MANAGEMENT_ENCLAVE_BASE;
-#else
-    start_pc = get_entry_point();
+    if(nenclaves > 0) {
+      start_pc = MANAGEMENT_ENCLAVE_BASE;
+    }
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
   }
 
