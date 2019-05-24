@@ -1,6 +1,6 @@
 #include "include/praesidio.h"
 
-#define NUM_OF_ENCLAVES (126-33) //ascii val for ! up to ascii val for ~
+#define NUM_OF_ENCLAVES 14 // This is the amount of enclave data that fit in one enclave data page. (126-33) //ascii val for ! up to ascii val for ~
 
 void normal_world() {
   //This is the code that runs in the normal world.
@@ -9,7 +9,7 @@ void normal_world() {
   char *enclavePages[3];
 
 
-  for(int i = 0; i < 100; i++) {
+  for(int i = 0; i < NUM_OF_ENCLAVES; i++) {
     enclaveMemory += 3*PAGE_SIZE;
     enclavePages[0] = enclaveMemory;
     enclavePages[1] = enclaveMemory + PAGE_SIZE;

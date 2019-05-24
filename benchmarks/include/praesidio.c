@@ -119,7 +119,8 @@ enclave_id_t start_enclave(char *source_page, unsigned int num_donated_pages, ch
   }
   struct Message_t message;
   struct Message_t response;
-  message.source = getCurrentEnclaveID();
+  enclave_id_t currentEnclave = getCurrentEnclaveID();
+  message.source = currentEnclave;
   message.destination = ENCLAVE_MANAGEMENT_ID;
   message.type = MSG_CREATE_ENCLAVE;
   message.content = 0;
@@ -158,5 +159,8 @@ enclave_id_t start_enclave(char *source_page, unsigned int num_donated_pages, ch
   message.type = MSG_SWITCH_ENCLAVE;
   message.content = myEnclave;
   sendMessage(&message);
+  do {
+    receiveMessage(&response);
+  } while(response.source != ENCLAVE_MANAGEMENT_ID);
   return myEnclave;
 }

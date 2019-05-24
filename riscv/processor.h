@@ -125,9 +125,9 @@ struct state_t
   reg_t tdata2[num_triggers];
 
   //Register to contain the identifier for enclave page communication system type instructions
-  #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-    reg_t arg_enclave_id;
-  #endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
+#ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
+  reg_t arg_enclave_id;
+#endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
 
   uint32_t fflags;
   uint32_t frm;

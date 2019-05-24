@@ -45,7 +45,8 @@ void fillPage(Address_t baseAddress, char value) {
 char putPageEntry(Address_t baseAddress, enclave_id_t id) {
   //This load is to simulate the latency that would be caused to get this tag into the cache.
   char *basePointer = (char *) baseAddress;
-  volatile char x = *basePointer; //TODO remove this, because it will not allow this if management enclave does not own the page.
+  //volatile char x = *basePointer; //This is not allowed if management enclave does not own the page.
+  volatile char x = *((char *)(PAGE_DIRECTORY_BASE_ADDRESS + (baseAddress % PAGE_SIZE)));
   setArgumentEnclaveIdentifier(id);
   //Set the page to the specified enclave identifier.
   asm volatile (
@@ -72,36 +73,64 @@ void saveCurrentContext(struct Context_t *context) {
 }
 
 int createEnclave() {
-  //TODO add support for multiple enclaves
+  //TODO add support for more enclaves than fit on one page.
   struct EnclaveData_t *enclaveData = (struct EnclaveData_t *) ENCLAVE_DATA_BASE_ADDRESS;
-  enclaveData->eID = state.nextEnclaveID;
+  int i;
+  for(i = 0; ; i++) {
+    if(i >= PAGE_SIZE / sizeof(struct EnclaveData_t)) {
+      return -1;
+    }
+    if(enclaveData[i].eID == ENCLAVE_INVALID_ID) {
+      break;
+    }
+  }
+#ifdef PRAESIDIO_DEBUG
+  output_string("creating enclave in slot: ");
+  output_char(i + '0');
+  output_string(" with ID: ");
+  output_char(state.nextEnclaveID + '0');
+  output_char('\n');
+#endif
+  enclaveData[i].eID = state.nextEnclaveID;
   state.nextEnclaveID += 1;
-  enclaveData->state = STATE_CREATED;
-  return 0;
+  enclaveData[i].state = STATE_CREATED;
+  return i;
 }
 
 enum boolean donatePage(enclave_id_t recipient, Address_t page_base) {
   //TODO look for enclave data in enclave data structure.
   struct EnclaveData_t *enclaveData = (struct EnclaveData_t *) ENCLAVE_DATA_BASE_ADDRESS;
-  if(recipient != enclaveData->eID) {
-    output_string("Donate Page: enclaveID ERROR!\n");
-    return BOOL_FALSE;
+  int i;
+  for(i = 0; ; i++) {
+    if(i >= PAGE_SIZE / sizeof(struct EnclaveData_t)) {
+#ifdef PRAESIDIO_DEBUG
+      output_string("Donate Page: enclaveID ERROR!\n");
+#endif
+      return BOOL_FALSE;
+    }
+    if(enclaveData[i].eID == recipient) {
+      break;
+    }
   }
   if(page_base & (PAGE_SIZE-1)) {
+#ifdef PRAESIDIO_DEBUG
     output_string("Donate Page: address not at base of page ERROR!\n");
+#endif
     return BOOL_FALSE;
   }
-  switch(enclaveData->state) {
+  switch(enclaveData[i].state) {
     case STATE_CREATED:
-      enclaveData->codeEntryPoint = page_base; //This assumes the first page that is given to an enclave is also the code entry point.
-      enclaveData->state = STATE_RECEIVINGPAGES;
+      enclaveData[i].codeEntryPoint = page_base; //This assumes the first page that is given to an enclave is also the code entry point.
+      enclaveData[i].state = STATE_RECEIVINGPAGES;
       putPageEntry(page_base, recipient);
       break;
     case STATE_RECEIVINGPAGES:
       putPageEntry(page_base, recipient);
       break;
     case STATE_FINALIZED:
+#ifdef PRAESIDIO_DEBUG
       output_string("Donate Page: enclave already running ERROR!\n");
+#endif
       return BOOL_FALSE;
   }
 }
@@ -131,10 +160,22 @@ Address_t waitForEnclave() {
       message.source = message.destination;
       message.destination = tmpID;
       sendMessage(&message);
+      enclaveData = (struct EnclaveData_t *) ENCLAVE_DATA_BASE_ADDRESS; //TODO make this dependent on the received message.
+      int i;
+      for(i = 0; ; i++) {
+        if(i >= PAGE_SIZE / sizeof(struct EnclaveData_t)) {
+#ifdef PRAESIDIO_DEBUG
+          output_string("waitForEnclave: ERROR enclave entry point not found!\n");
+#endif
+          return 0;
+        }
+        if(enclaveData[i].eID == message.content) {
+          break;
+        }
+      }
 
       switchEnclaveID(message.content);
-      enclaveData = (struct EnclaveData_t *) ENCLAVE_DATA_BASE_ADDRESS; //TODO make this dependent on the received message.
-      entryPoint = enclaveData->codeEntryPoint;
+      entryPoint = enclaveData[i].codeEntryPoint;
       break;
     }
   }
@@ -142,6 +183,7 @@ Address_t waitForEnclave() {
 }
 
 enclave_id_t internalArgument = ENCLAVE_INVALID_ID;
+CoreID_t nextIdleCore = 2;
 
 void managementRoutine() {
   struct Context_t savedContext;
@@ -169,7 +211,12 @@ void managementRoutine() {
         output_string("Received create enclave message.\n");
 #endif
         index = createEnclave();
-        response.content = ((struct EnclaveData_t *) ENCLAVE_DATA_BASE_ADDRESS)[index].eID;
+        if(index >= 0) {
+          struct EnclaveData_t *enclaveData = (struct EnclaveData_t *) ENCLAVE_DATA_BASE_ADDRESS;
+          response.content = enclaveData[index].eID;
+        } else {
+          response.content = ENCLAVE_INVALID_ID;
+        }
         break;
       case MSG_DELETE_ENCLAVE:
 #ifdef PRAESIDIO_DEBUG
@@ -190,11 +237,14 @@ void managementRoutine() {
 #ifdef PRAESIDIO_DEBUG
         output_string("Received switch enclave message.\n");
 #endif
-        switchEnclave(2, message.content);
+        switchEnclave(nextIdleCore++, message.content);
         break;
       case MSG_SET_ARGUMENT: //TODO include this in the donate page message.
 #ifdef PRAESIDIO_DEBUG
         output_string("Received set argument message.\n");
+        output_string("internalArgument set to: ");
+        output_char(message.content + '0');
+        output_char('\n');
 #endif
         internalArgument = message.content;
         break;
@@ -213,7 +263,7 @@ Address_t initialize() {
   if(coreID == enclaveCores[0]) { //TODO fill state.enclaveCores
     switchEnclaveID(ENCLAVE_MANAGEMENT_ID);
 #ifdef PRAESIDIO_DEBUG
-    output_string("In management enclave.\n");
+    output_string("management.c: In management enclave.\n");
 #endif
     state.nextEnclaveID = 1;
     for(int i = 0; i < NUMBER_OF_ENCLAVE_CORES; i++) {
@@ -224,6 +274,13 @@ Address_t initialize() {
     putPageEntry(ENCLAVE_DATA_BASE_ADDRESS, ENCLAVE_MANAGEMENT_ID);
     fillPage(PAGE_DIRECTORY_BASE_ADDRESS, 0xFF);
     fillPage(ENCLAVE_DATA_BASE_ADDRESS, 0x00);
+    struct EnclaveData_t *enclaveDataPointer = (struct EnclaveData_t *) ENCLAVE_DATA_BASE_ADDRESS;
+    for(int i = 0; i < PAGE_SIZE / sizeof(struct EnclaveData_t); i++) {
+#ifdef PRAESIDIO_DEBUG
+      output_string("management.c: clearing enclave data\n");
+#endif
+      enclaveDataPointer[i].eID = ENCLAVE_INVALID_ID;
+    }
 
     resetNormalWorld();
     clearWorkingMemory();

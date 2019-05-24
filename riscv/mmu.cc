@@ -55,7 +55,6 @@ tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr)
   auto host_addr = sim->addr_to_mem(paddr);
   //fprintf(stderr, "mmu.cc: fetch slow path: vaddr 0x%0lx, paddr 0x%0lx, haddr 0x%0lx\n", vaddr, paddr, host_addr);
   if (host_addr) {
-    //fprintf(stderr, "mmu.cc: refilling TLB.\n");
     return refill_tlb(vaddr, paddr, host_addr, FETCH);
   } else {
     if (!sim->mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp))
@@ -116,8 +115,9 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t i
         refill_tlb(addr, paddr, host_addr, LOAD);
     } else {
 #ifdef PRAESIDIO_DEBUG
-      fprintf(stderr, "mmu.cc: Warning! Denying load access to enclave %lu, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", id, addr, paddr, num_of_pages, PGSIZE);
+      fprintf(stderr, "mmu.cc: Warning! Denying load access to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", id, addr, paddr, num_of_pages, PGSIZE);
 #endif
+      exit(-1); //TODO remove this, but for now it is useful for debugging.
       for (reg_t i = 0; i < len; i++) {
         bytes[i] = 0xFF;
       }
@@ -153,11 +153,14 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
         refill_tlb(addr, paddr, host_addr, STORE);
     } else {
 #ifdef PRAESIDIO_DEBUG
-      fprintf(stderr, "mmu.cc: Warning! Denying store access to enclave %lu, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", id, addr, paddr, num_of_pages, PGSIZE);
+      fprintf(stderr, "mmu.cc: Warning! Denying store access to enclave 0x%0lx, virtual address 0x%0lx, physical address 0x%0lx, number of pages %lu, page size 0x%0lx\n", id, addr, paddr, num_of_pages, PGSIZE);
 #endif
+      exit(-1); //TODO remove this, but for now it is useful for debugging.
     }
   } else if (!sim->mmio_store(paddr, len, bytes)) {
+#ifdef PRAESIDIO_DEBUG
     fprintf(stderr, "mmu.cc: Throwing store access fault in store_slow_path.\n");
+#endif
     throw trap_store_access_fault(addr);
   }
 }
