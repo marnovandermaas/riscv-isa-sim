@@ -63,6 +63,9 @@ bandwidth: $(DEPS)
 	$(CC) $(CCFLAGS) -c $@.c -o $(BUILD_DIR)/$@.o
 	$(CC) $(CCFLAGS) -o $@.out $(BUILD_DIR)/$@.o $(LINK_FILES)
 
+run:
+	./runTests.sh
+
 #Remove .out and .o files
 clean:
 	rm *.out $(BUILD_DIR)/*.o
