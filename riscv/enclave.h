@@ -4,6 +4,8 @@
 #include "decode.h"
 #include "../managementenclave/enclaveLibrary.h"
 
+#define NUM_OF_ENCLAVE_PAGES 3
+
 struct Message_t {
   enclave_id_t source;
   enclave_id_t destination;

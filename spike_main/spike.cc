@@ -12,6 +12,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include "debug.h"
 
 static void help()
 {
@@ -63,7 +64,9 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
       num_mems = 2;
     }
 #endif
+#ifdef PRAESIDIO_DEBUG
     fprintf(stderr, "spike.cc: creating vector with %d elements.\n", num_mems);
+#endif
     std::vector<std::pair<reg_t, mem_t*>> memory_vector = std::vector<std::pair<reg_t, mem_t*>>(num_mems, std::make_pair(reg_t(0), (mem_t *) NULL));
 
 #ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
@@ -72,7 +75,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
       FILE *management_file;
       management_file = fopen("../build/management.bin", "rb");
       if(management_file == NULL) {
-        fprintf(stderr, "spike.cc: could not open management file.\n");
+        fprintf(stderr, "spike.cc: ERROR could not open management file.\n");
         exit(-1);
       }
       size_t file_size = PGSIZE;
@@ -82,10 +85,12 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
         file_status = fread(&management_array[i], sizeof(char), 1, management_file);
         //fprintf(stderr, "%02x ", management_array[i] & 0xFF); //Need to &0xFF because otherwise C will sign extend values.
         if (file_status != 1) {
+#ifdef PRAESIDIO_DEBUG
           fprintf(stderr, "spike.cc: read management binary with %lu amount of Bytes, ferror: %d, feof: %d\n", i, ferror(management_file), feof(management_file));
+#endif
           if(ferror(management_file) || !feof(management_file))
           {
-            fprintf(stderr, "spike.cc: error in reading file.\n");
+            fprintf(stderr, "spike.cc: ERROR in reading file.\n");
             exit(-1);
           }
           break;
@@ -94,7 +99,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
       //Example using io streams:
       //std::ifstream management_file ("management.bin", std::ios::in|std::ios::binary);
       //if(!management_file.good()) {
-      //  fprintf(stderr, "spike.cc: could not open management file.\n");
+      //  fprintf(stderr, "spike.cc: ERROR could not open management file.\n");
       //  exit(-1);
       //}
       //size_t file_size = PGSIZE;
@@ -108,7 +113,9 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
       free(management_array);
     }
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#ifdef PRAESIDIO_DEBUG
     fprintf(stderr, "spike.cc: making working memory at base: 0x%0x\n", DRAM_BASE);
+#endif
     memory_vector[0] = std::make_pair(reg_t(DRAM_BASE), new mem_t(size));
     return memory_vector;
   }
@@ -244,7 +251,9 @@ int main(int argc, char** argv)
           l2.reset(cache_sim_t::construct(llc_string, "L2$"));
         } else if(atoi(llc_partition_string) == CACHE_PARTITIONING_RMT) {
           cache_partitioning_type = CACHE_PARTITIONING_RMT;
+#ifdef PRAESIDIO_DEBUG
           fprintf(stderr, "spike.cc: Initializing partitioned cache.\n");
+#endif
           cache_sim_t::parse_config_string(llc_string, &sets, &ways, &linesz);
           partitioned_l2.reset(new partitioned_cache_sim_t(sets*ways));
         } else if(atoi(llc_partition_string) == CACHE_PARTITIONING_STATIC) {
@@ -373,6 +382,8 @@ int main(int argc, char** argv)
   s.set_debug(debug);
   s.set_log(log);
   s.set_histogram(histogram);
+#ifdef PRAESIDIO_DEBUG
   fprintf(stderr, "spike.cc: starting simulation.\n");
+#endif
   return s.run();
 }

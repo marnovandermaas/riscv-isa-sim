@@ -137,7 +137,6 @@ bool debug_module_t::load(reg_t addr, size_t len, uint8_t* bytes)
 
   fprintf(stderr, "ERROR: invalid load from debug module: %zd bytes at 0x%016"
           PRIx64 "\n", len, addr);
-  fprintf(stderr, "test print1\n"); //TODO remove
 
   return false;
 }

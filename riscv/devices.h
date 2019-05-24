@@ -72,7 +72,7 @@ class mem_t : public abstract_mem_t {
         data[i] = initial_data[i];
       }
     } else {
-      fprintf(stderr, "devices.h: could not initialize memory: %lu, %lu\n", size, length);
+      fprintf(stderr, "devices.h: ERROR could not initialize memory: %lu, %lu\n", size, length);
       exit(-1);
     }
   }

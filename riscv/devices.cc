@@ -1,4 +1,5 @@
 #include "devices.h"
+#include "debug.h"
 
 void bus_t::add_device(reg_t addr, abstract_device_t* dev)
 {
@@ -46,7 +47,9 @@ std::pair<reg_t, abstract_device_t*> bus_t::find_device(reg_t addr)
   abstract_device_t* tmpDevice = NULL;
   reg_t tmpAddress = 0;
   if (devices.empty()) {
+#ifdef PRAESIDIO_DEBUG
     fprintf(stderr, "devices.cc: Warning! devices list is empty.\n");
+#endif
     return std::make_pair((reg_t) 0, (abstract_device_t *)NULL);
   }
   for(std::map<reg_t,abstract_device_t*>::iterator it = devices.begin(); it != devices.end(); ++it) {

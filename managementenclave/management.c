@@ -1,6 +1,7 @@
 #include "management.h"
 #include "instructions.h"
 #include <stdio.h>
+#include "../riscv/debug.h"
 
 struct ManagementState_t state;
 
@@ -144,9 +145,10 @@ enclave_id_t internalArgument = ENCLAVE_INVALID_ID;
 
 void managementRoutine() {
   struct Context_t savedContext;
+  int index;
   saveCurrentContext(&savedContext);
   enclave_id_t savedEnclaveID = getCurrentEnclaveID();
-  char prntString[5] = "t  \n";
+  //char prntString[5] = "t  \n";
 
   struct Message_t message;
   receiveMessage(&message);
@@ -159,31 +161,41 @@ void managementRoutine() {
 
   if(message.source == ENCLAVE_DEFAULT_ID &&
       message.destination == ENCLAVE_MANAGEMENT_ID) {
-    prntString[2] = ((char) message.type) + '0';
-    output_string(prntString);
+    //prntString[2] = ((char) message.type) + '0';
+    //output_string(prntString);
     switch(message.type) {
       case MSG_CREATE_ENCLAVE:
+#ifdef PRAESIDIO_DEBUG
         output_string("Received create enclave message.\n");
-        int index = createEnclave();
+#endif
+        index = createEnclave();
         response.content = ((struct EnclaveData_t *) ENCLAVE_DATA_BASE_ADDRESS)[index].eID;
         break;
       case MSG_DELETE_ENCLAVE:
+#ifdef PRAESIDIO_DEBUG
         output_string("Received delete enclave message.\n");
+#endif
         break;
       case MSG_ATTEST: //Not needed yet.
         break;
       case MSG_ACQUIRE_PHYS_CAP: //Not needed yet.
         break;
       case MSG_DONATE_PAGE:
+#ifdef PRAESIDIO_DEBUG
         output_string("Received donate page enclave message.\n");
+#endif
         donatePage(internalArgument, message.content);
         break;
       case MSG_SWITCH_ENCLAVE:
+#ifdef PRAESIDIO_DEBUG
         output_string("Received switch enclave message.\n");
+#endif
         switchEnclave(2, message.content);
         break;
       case MSG_SET_ARGUMENT: //TODO include this in the donate page message.
+#ifdef PRAESIDIO_DEBUG
         output_string("Received set argument message.\n");
+#endif
         internalArgument = message.content;
         break;
     }
@@ -200,7 +212,9 @@ Address_t initialize() {
   CoreID_t *enclaveCores = (CoreID_t *) 0x1024 /*ROM location of enclave 0's core ID*/;
   if(coreID == enclaveCores[0]) { //TODO fill state.enclaveCores
     switchEnclaveID(ENCLAVE_MANAGEMENT_ID);
+#ifdef PRAESIDIO_DEBUG
     output_string("In management enclave.\n");
+#endif
     state.nextEnclaveID = 1;
     for(int i = 0; i < NUMBER_OF_ENCLAVE_CORES; i++) {
       state.runningEnclaves[i] = ENCLAVE_MANAGEMENT_ID;
