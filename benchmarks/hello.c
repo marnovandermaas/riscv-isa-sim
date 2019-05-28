@@ -9,7 +9,7 @@ void normal_world() {
   char name[INPUT_LEN] = "Marno";
   long page_num = 2;
   volatile char *address;
-  char *input = PAGE_TO_POINTER(page_num);
+  char *input = (char *) PAGE_TO_POINTER(page_num);
   char read_buffer[OUTPUT_LEN];
 
   char *enclaveMemory = (char *) DRAM_BASE + 3*PAGE_SIZE;
@@ -37,7 +37,7 @@ void enclave_world() {
   //This is the code that runs in the enclave world.
   volatile char *address;
   long page_num = 5;
-  char *output = PAGE_TO_POINTER(page_num);
+  char *output = (char *) PAGE_TO_POINTER(page_num);
   char read_buffer[INPUT_LEN+3];
 
   read_buffer[0] = 'H';
@@ -57,11 +57,6 @@ void enclave_world() {
 
 int main() {
   int id = getCurrentEnclaveID();
-
-  char outString[16] = "Encl  \n"; //This is the output string we will use.
-  char idChar = id + '0'; //We add '0' to the id to convert the core ID to an ASCII code.
-  outString[5] = idChar; //Set the second space to the idChar
-  output_string(outString); //Output the string.
 
   if(id == ENCLAVE_DEFAULT_ID) {
     normal_world();

@@ -26,11 +26,6 @@ void enclave_world(int enclaveID) {
 int main() {
   int id = getCurrentEnclaveID();
 
-  char outString[16] = "Encl  \n"; //This is the output string we will use.
-  char idChar = id + '0'; //We add '0' to the id to convert the core ID to an ASCII code.
-  outString[5] = idChar; //Set the second space to the idChar
-  output_string(outString); //Output the string.
-
   if(id == ENCLAVE_DEFAULT_ID) {
     normal_world();
   } else {

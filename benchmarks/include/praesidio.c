@@ -5,7 +5,8 @@
 
 //Sets read access to a page to an enclave
 void give_read_permission(int pageNumber, enclave_id_t receiver_id) {
-  PAGE_TO_POINTER(pageNumber)[0] = BUSY_SIGNAL;
+  char *busy_byte = (char *) PAGE_TO_POINTER((long) pageNumber);
+  busy_byte[0] = BUSY_SIGNAL;
   setArgumentEnclaveIdentifier(receiver_id);
   asm volatile (
     "csrrw zero, 0x40A, %0"
@@ -114,7 +115,7 @@ void output_string(char *s) {
 
 
 enclave_id_t start_enclave(char *source_page, unsigned int num_donated_pages, char **array_of_page_addresses) {
-  if(num_donated_pages != 3) {
+  if(num_donated_pages < 3) {
     return ENCLAVE_INVALID_ID;
   }
   struct Message_t message;
@@ -138,24 +139,14 @@ enclave_id_t start_enclave(char *source_page, unsigned int num_donated_pages, ch
   do {
     receiveMessage(&response);
   } while(response.source != ENCLAVE_MANAGEMENT_ID);
-  message.type = MSG_DONATE_PAGE;
-  message.content = (unsigned long) array_of_page_addresses[0]; //TODO enclaveMemory; //This is the page for enclave memory
-  sendMessage(&message);
-  do {
-    receiveMessage(&response);
-  } while(response.source != ENCLAVE_MANAGEMENT_ID);
-  message.type = MSG_DONATE_PAGE;
-  message.content = (unsigned long) array_of_page_addresses[1]; //TODO enclaveMemory + PAGE_SIZE; //This is the page for enclave stack
-  sendMessage(&message);
-  do {
-    receiveMessage(&response);
-  } while(response.source != ENCLAVE_MANAGEMENT_ID);
-  message.type = MSG_DONATE_PAGE;
-  message.content = (unsigned long) array_of_page_addresses[2]; //TODO + 2*PAGE_SIZE; //This is the page for sharing with the normal world
-  sendMessage(&message);
-  do {
-    receiveMessage(&response);
-  } while(response.source != ENCLAVE_MANAGEMENT_ID);
+  for(unsigned int i = 0; i < num_donated_pages; i++) {
+    message.type = MSG_DONATE_PAGE;
+    message.content = (unsigned long) array_of_page_addresses[i]; //This is the page for enclave memory
+    sendMessage(&message);
+    do {
+      receiveMessage(&response);
+    } while(response.source != ENCLAVE_MANAGEMENT_ID);
+  }
   message.type = MSG_SWITCH_ENCLAVE;
   message.content = myEnclave;
   sendMessage(&message);

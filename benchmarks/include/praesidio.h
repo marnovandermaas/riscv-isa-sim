@@ -6,7 +6,7 @@
 #include "../riscv/encoding.h"
 
 // PGSIZE (1 << 12)
-#define PAGE_TO_POINTER(NUM) ((char *) ((NUM * (1 << 12)) | DRAM_BASE))
+#define PAGE_TO_POINTER(NUM) (((NUM * (1 << 12)) | DRAM_BASE))
 
 void give_read_permission(int pageNumber, enclave_id_t receiver_id);
 

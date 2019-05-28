@@ -4,8 +4,6 @@
 #define ENCRYPT (0xAA)
 #define DECRYPT (0x55)
 
-#define MY_ENCLAVE_ID (2)
-
 //Send byte with ENCRYPT/DECRYPT, then 128-bit key, then 128-bit IV, then 32-bit length, then length amount of bytes
 
 //This is the code that runs in the normal world.
@@ -29,14 +27,23 @@ void normal_world() {
   output_string(content);
   output_char('\n');
 
+  //Starting enclave
+  char *enclaveMemory = (char *) DRAM_BASE + 3*PAGE_SIZE;
+  char *enclavePages[3];
+  enclavePages[0] = enclaveMemory;
+  enclavePages[1] = enclaveMemory + PAGE_SIZE;
+  enclavePages[2] = enclaveMemory + 2*PAGE_SIZE;
+  enclave_id_t myEnclave = start_enclave((char *) DRAM_BASE, 3, enclavePages);
+  if(myEnclave == ENCLAVE_INVALID_ID) return;
+
   //Setting up enclave related variables.
   long page_num = 2;
   volatile char *address;
-  char *input = PAGE_TO_POINTER(page_num);
+  char *input = (char *) PAGE_TO_POINTER(page_num);
   char read_buffer[length+1];
   read_buffer[length] = '\0';
-  give_read_permission(page_num, MY_ENCLAVE_ID);
-  address = get_receive_mailbox_base_address(MY_ENCLAVE_ID);
+  give_read_permission(page_num, myEnclave);
+  address = get_receive_mailbox_base_address(myEnclave);
 
   //Preparing the encryption message.
   message[0] = ENCRYPT;
@@ -98,13 +105,13 @@ void enclave_world() {
 
   volatile char *address;
   long page_num = 5;
-  char *output = PAGE_TO_POINTER(page_num);
+  char *output = (char *) PAGE_TO_POINTER(page_num);
   char read_buffer[10*AES_BLOCK_SIZE];
   char write_buffer[10*AES_BLOCK_SIZE];
   int length;
 
-  give_read_permission(page_num, 0); //TODO instead of hardcoding 0 import an "enclave.h" or similar to use.
-  address = get_receive_mailbox_base_address(0);
+  give_read_permission(page_num, ENCLAVE_DEFAULT_ID);
+  address = get_receive_mailbox_base_address(ENCLAVE_DEFAULT_ID);
 
   for(int i = 0; i < 2; i++) {
     address += get_enclave_message(address, read_buffer);
@@ -115,13 +122,11 @@ void enclave_world() {
 }
 
 int main() {
-  int id = get_enclave_id();
+  int id = getCurrentEnclaveID();
 
-  if(id == 0) {
+  if(id == ENCLAVE_DEFAULT_ID) {
     normal_world();
-  } else if (id == MY_ENCLAVE_ID) {
-    enclave_world();
   } else {
-    //Do nothing if you are any other enclave.
+    enclave_world();
   }
 }
