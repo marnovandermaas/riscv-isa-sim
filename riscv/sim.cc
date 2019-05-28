@@ -331,7 +331,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
       return mem->contents() + (addr - desc.first);
     }
   }
-  fprintf(stderr, "sim.cc: ERROR returning NULL for address to memory.\n");
+  fprintf(stderr, "sim.cc: ERROR returning NULL for address to memory: 0x%016lx.\n", addr);
   exit(-1);
   return NULL;
 }

@@ -114,9 +114,9 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t i
       else
         refill_tlb(addr, paddr, host_addr, LOAD);
     } else {
-#ifdef PRAESIDIO_DEBUG
-      fprintf(stderr, "mmu.cc: Warning! Denying load access to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", id, addr, paddr, num_of_pages, PGSIZE);
-#endif
+//#ifdef PRAESIDIO_DEBUG
+      fprintf(stderr, "mmu.cc: Error! Denying load access to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", id, addr, paddr, num_of_pages, PGSIZE);
+//#endif
       exit(-1); //TODO remove this, but for now it is useful for debugging.
       for (reg_t i = 0; i < len; i++) {
         bytes[i] = 0xFF;
@@ -152,9 +152,9 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
       else
         refill_tlb(addr, paddr, host_addr, STORE);
     } else {
-#ifdef PRAESIDIO_DEBUG
-      fprintf(stderr, "mmu.cc: Warning! Denying store access to enclave 0x%0lx, virtual address 0x%0lx, physical address 0x%0lx, number of pages %lu, page size 0x%0lx\n", id, addr, paddr, num_of_pages, PGSIZE);
-#endif
+//#ifdef PRAESIDIO_DEBUG
+      fprintf(stderr, "mmu.cc: Error! Denying store access to enclave 0x%0lx, virtual address 0x%0lx, physical address 0x%0lx, number of pages %lu, page size 0x%0lx\n", id, addr, paddr, num_of_pages, PGSIZE);
+//#endif
       exit(-1); //TODO remove this, but for now it is useful for debugging.
     }
   } else if (!sim->mmio_store(paddr, len, bytes)) {

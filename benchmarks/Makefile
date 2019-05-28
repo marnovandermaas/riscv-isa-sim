@@ -50,8 +50,9 @@ startenclaves: $(DEPS)
 
 #Compile aes.c and link aes.o, praesidio.o and init.o
 aes: $(DEPS)
-	$(CC) $(CCFLAGS) -c $@.c -o $(BUILD_DIR)/$@.o
-	$(CC) $(CCFLAGS) -o $@.out $(BUILD_DIR)/$@.o $(LINK_FILES)
+	$(CC) $(CCFLAGS) -c $@/$@.c -o $(BUILD_DIR)/$@.o
+	$(CC) $(CCFLAGS) -c $@/main.c -o $(BUILD_DIR)/$@_main.o
+	$(CC) $(CCFLAGS) -o $@.out $(BUILD_DIR)/$@.o $(BUILD_DIR)/$@_main.o $(LINK_FILES)
 
 #Compile latency.c and link with praesidio.o and init.o
 latency: $(DEPS)

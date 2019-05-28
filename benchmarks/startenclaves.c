@@ -1,20 +1,22 @@
-#include "include/praesidio.h"
+#include "praesidio.h"
 
 #define NUM_OF_ENCLAVES 14 // This is the amount of enclave data that fit in one enclave data page. (126-33) //ascii val for ! up to ascii val for ~
+
+#define NUMBER_OF_ENCLAVE_PAGES (5)
 
 void normal_world() {
   //This is the code that runs in the normal world.
 
   char *enclaveMemory = (char *) DRAM_BASE;
-  char *enclavePages[3];
-
+  char *enclavePages[NUMBER_OF_ENCLAVE_PAGES];
 
   for(int i = 0; i < NUM_OF_ENCLAVES; i++) {
-    enclaveMemory += 3*PAGE_SIZE;
-    enclavePages[0] = enclaveMemory;
-    enclavePages[1] = enclaveMemory + PAGE_SIZE;
-    enclavePages[2] = enclaveMemory + 2*PAGE_SIZE;
-    enclave_id_t myEnclave = start_enclave((char *) DRAM_BASE, 3, enclavePages);
+    enclaveMemory += NUMBER_OF_ENCLAVE_PAGES*PAGE_SIZE;
+    for(int i = 0; i < NUMBER_OF_ENCLAVE_PAGES; i++) {
+      enclavePages[i] = enclaveMemory;
+      enclaveMemory += PAGE_SIZE;
+    }
+    enclave_id_t myEnclave = start_enclave((char *) DRAM_BASE, NUMBER_OF_ENCLAVE_PAGES, enclavePages);
     if(myEnclave == ENCLAVE_INVALID_ID) return;
   }
 }

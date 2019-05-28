@@ -1,8 +1,10 @@
-#include "include/praesidio.h"
+#include "praesidio.h"
 
 #define INPUT_LEN (10)
 #define OUTPUT_LEN (16)
 #define REPEAT (4)
+
+#define NUMBER_OF_ENCLAVE_PAGES (5)
 
 void normal_world() {
   //This is the code that runs in the normal world.
@@ -13,12 +15,13 @@ void normal_world() {
   char read_buffer[OUTPUT_LEN];
   int offset = 0;
 
-  char *enclaveMemory = (char *) DRAM_BASE + 3*PAGE_SIZE;
-  char *enclavePages[3];
-  enclavePages[0] = enclaveMemory;
-  enclavePages[1] = enclaveMemory + PAGE_SIZE;
-  enclavePages[2] = enclaveMemory + 2*PAGE_SIZE;
-  enclave_id_t myEnclave = start_enclave((char *) DRAM_BASE, 3, enclavePages);
+  char *enclaveMemory = (char *) DRAM_BASE + NUMBER_OF_ENCLAVE_PAGES*PAGE_SIZE;
+  char *enclavePages[NUMBER_OF_ENCLAVE_PAGES];
+  for(int i = 0; i < NUMBER_OF_ENCLAVE_PAGES; i++) {
+    enclavePages[i] = enclaveMemory;
+    enclaveMemory += PAGE_SIZE;
+  }
+  enclave_id_t myEnclave = start_enclave((char *) DRAM_BASE, NUMBER_OF_ENCLAVE_PAGES, enclavePages);
   if(myEnclave == ENCLAVE_INVALID_ID) return;
 
   for(int i = 0; i < REPEAT; i++) {
@@ -36,7 +39,7 @@ void normal_world() {
 void enclave_world() {
   //This is the code that runs in the enclave world.
   volatile char *address;
-  long page_num = 5;
+  long page_num = NUMBER_OF_ENCLAVE_PAGES+3;
   char *output = (char *) PAGE_TO_POINTER(page_num);
   char read_buffer[INPUT_LEN];
   int offset = 0;

@@ -85,15 +85,6 @@ int get_enclave_message(volatile char *mailbox_address, char *read_buffer) {
   return offset;
 }
 
-//This function takes as input the enclave identifier that should be called, a string that will be sent to the enclave and also has a pointer to where it should write the output.
-void run_enclave(int enclave_id, char *input, char *output) {
-  /*char print_string[16] = "id   in: ";
-  print_string[3] = enclave_id_t + '0';
-  output_string(print_string);
-  output_string(input);
-  output_char('\n');*/
-}
-
 //Writes a character to display.
 void output_char(char c) {
   asm volatile ( //This instruction writes a value to a CSR register. This is a custom register and I have modified Spike to print whatever character is written to this CSR. This is my way of printing without requiring the support of a kernel or the RISC-V front end server.
@@ -102,6 +93,21 @@ void output_char(char c) {
     : "r"(c) //input operands
     : //clobbered registers
   );
+}
+
+void output_hexbyte(unsigned char c) {
+  unsigned char upper = (c >> 4);
+  unsigned char lower = (c & 0xF);
+  if(upper < 10) {
+    output_char(upper + '0');
+  } else {
+    output_char(upper + 'A' - 10);
+  }
+  if(lower < 10) {
+    output_char(lower + '0');
+  } else {
+    output_char(lower + 'A' - 10);
+  }
 }
 
 //Calls output_char in a loop.
@@ -115,7 +121,7 @@ void output_string(char *s) {
 
 
 enclave_id_t start_enclave(char *source_page, unsigned int num_donated_pages, char **array_of_page_addresses) {
-  if(num_donated_pages < 3) {
+  if(num_donated_pages < 5) {
     return ENCLAVE_INVALID_ID;
   }
   struct Message_t message;
@@ -126,7 +132,7 @@ enclave_id_t start_enclave(char *source_page, unsigned int num_donated_pages, ch
   message.type = MSG_CREATE_ENCLAVE;
   message.content = 0;
   sendMessage(&message);
-  for(int i = 0; i < PAGE_SIZE; i++) {
+  for(int i = 0; i < 2*PAGE_SIZE; i++) {
     array_of_page_addresses[0][i] = source_page[i];
   }
   do {
