@@ -13,8 +13,7 @@ void normal_world() {
   for(int i = 0; i < NUM_OF_ENCLAVES; i++) {
     enclaveMemory += NUMBER_OF_ENCLAVE_PAGES*PAGE_SIZE;
     for(int i = 0; i < NUMBER_OF_ENCLAVE_PAGES; i++) {
-      enclavePages[i] = enclaveMemory;
-      enclaveMemory += PAGE_SIZE;
+      enclavePages[i] = enclaveMemory+i*PAGE_SIZE;
     }
     enclave_id_t myEnclave = start_enclave((char *) DRAM_BASE, NUMBER_OF_ENCLAVE_PAGES, enclavePages);
     if(myEnclave == ENCLAVE_INVALID_ID) return;

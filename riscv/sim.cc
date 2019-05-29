@@ -40,16 +40,13 @@ void sim_t::request_halt(uint32_t id)
       }
     }
   }
-  // for(unsigned int i = 0; i < procs.size(); i++)
-  // {
-  //   fprintf(stderr, "Processor %u ended with instruction count %lu.\n", i, procs[i]->get_csr(CSR_MINSTRET));
-  // }
+  fprintf(stdout, "\n>>>>>INSTRUCTION_COUNT<<<<<\n%lu\n", procs[0]->get_csr(CSR_MINSTRET));
   bool csv_style = true;
 #ifdef PRAESIDIO_DEBUG
   csv_style = false;
 #endif
   while(true) {
-    if(csv_style) fprintf(stderr, "\n>>>>>CACHE_OUTPUT<<<<<\n");
+    if(csv_style) fprintf(stdout, "\n>>>>>CACHE_OUTPUT<<<<<\n");
     for(size_t i = 0; i < nenclaves + 1; i++)
     {
       if((ics[i] || dcs[i]) && !csv_style) fprintf(stderr, "\nCache stats for enclave %lu:\n", i);
@@ -78,6 +75,10 @@ void sim_t::request_halt(uint32_t id)
     }
     if(csv_style) break;
     csv_style = true;
+  }
+  for(unsigned int i = 0; i < procs.size(); i++)
+  {
+    procs[i]->output_histogram();
   }
   exit(0);
 }

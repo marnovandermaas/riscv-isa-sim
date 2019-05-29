@@ -219,6 +219,8 @@ public:
   bool halted() { return state.dcsr.cause ? true : false; }
   bool halt_request;
 
+  void output_histogram();
+
   // Return the index of a trigger that matched, or -1.
   inline int trigger_match(trigger_operation_t operation, reg_t address, reg_t data)
   {

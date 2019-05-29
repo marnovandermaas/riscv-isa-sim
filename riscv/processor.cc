@@ -45,17 +45,23 @@ processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
 
 processor_t::~processor_t()
 {
-#ifdef RISCV_ENABLE_HISTOGRAM
-  if (histogram_enabled)
-  {
-    fprintf(stderr, "PC Histogram size:%zu\n", pc_histogram.size());
-    for (auto it : pc_histogram)
-      fprintf(stderr, "%0" PRIx64 " %" PRIu64 "\n", it.first, it.second);
-  }
-#endif
+  output_histogram();
 
   delete mmu;
   delete disassembler;
+}
+
+void processor_t::output_histogram() {
+#ifdef RISCV_ENABLE_HISTOGRAM
+  if (histogram_enabled)
+  {
+    if(id == 0) fprintf(stdout, "\n>>>>>PC_HISTORGRAM<<<<<\n");
+    fprintf(stdout, "Size, %zu\n", pc_histogram.size());
+    for (auto it : pc_histogram) {
+      fprintf(stdout, "%0" PRIx64 ", %" PRIu64 "\n", it.first, it.second);
+    }
+  }
+#endif
 }
 
 static void bad_isa_string(const char* isa)

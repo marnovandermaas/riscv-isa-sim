@@ -81,11 +81,17 @@ void normal_world() {
   }
   input += send_enclave_message(input, message, message_length);
   address += get_enclave_message(address, read_buffer);
+  enum boolean success = BOOL_TRUE;
   output_string("Got decryption:\n0x");
   for (int i = 0; i < length; i++) {
     output_hexbyte(read_buffer[i]);
+    if(read_buffer[i] != content[i]) success = BOOL_FALSE;
   }
   output_char('\n');
+  
+  output_string("AES TEST: ");
+  if(success == BOOL_TRUE)  output_string("SUCCESS!\n");
+  else                      output_string("FAIL!\n");
 }
 
 struct AES_ctx aes_context;
@@ -137,7 +143,6 @@ void enclave_world() {
     length = do_aes(write_buffer, read_buffer);
     output += send_enclave_message(output, write_buffer, length);
   }
-  output_string("Exiting enclave.\n");
 }
 
 int main() {

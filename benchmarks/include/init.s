@@ -3,6 +3,7 @@
 
 .section .text.init
 entry:
+    #TODO make the stack offset dependent on a variable in the linker script
     auipc t0, 0x5           #t0 is pc plus 5000 which is the stack offset
     csrrs a0, 0xF14, zero   #Read hartID into a0
     add   sp, t0, zero      #Add the memory base and the stack offset and set it as the stack pointer.
