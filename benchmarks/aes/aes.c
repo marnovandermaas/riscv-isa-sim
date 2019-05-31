@@ -1,4 +1,5 @@
 /*
+This code was adapted from: https://github.com/kokke/tiny-AES-c
 
 This is an implementation of the AES algorithm, specifically ECB, CTR and CBC mode.
 Block size can be chosen in aes.h - available choices are AES128, AES192, AES256.
