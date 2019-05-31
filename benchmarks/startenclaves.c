@@ -22,6 +22,7 @@ void normal_world() {
 
 void enclave_world(int enclaveID) {
   output_char('!' + enclaveID);
+  output_char('\n');
 }
 
 int main() {

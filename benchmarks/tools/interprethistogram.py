@@ -5,7 +5,7 @@ def main():
   histogramHeader = ">>>>>PC_HISTORGRAM<<<<<\n"
   csvDicts = []
   if(len(sys.argv) < 3):
-    print('ERROR: too few arguments, please use by running "python3 producehistogramcsv.py <<input_file>> <<output_file>>"')
+    print('ERROR: too few arguments, please use by running "python3 interprethistogram.py <<input_file>> <<output_file>>"')
     return
   #print("Intput file: " + sys.argv[1])
   csvSection = False;
