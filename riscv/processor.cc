@@ -15,6 +15,7 @@
 #include <limits.h>
 #include <stdexcept>
 #include <algorithm>
+#include "debug.h"
 
 #undef STATE
 #define STATE state
@@ -44,17 +45,23 @@ processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
 
 processor_t::~processor_t()
 {
-#ifdef RISCV_ENABLE_HISTOGRAM
-  if (histogram_enabled)
-  {
-    fprintf(stderr, "PC Histogram size:%zu\n", pc_histogram.size());
-    for (auto it : pc_histogram)
-      fprintf(stderr, "%0" PRIx64 " %" PRIu64 "\n", it.first, it.second);
-  }
-#endif
+  output_histogram();
 
   delete mmu;
   delete disassembler;
+}
+
+void processor_t::output_histogram() {
+#ifdef RISCV_ENABLE_HISTOGRAM
+  if (histogram_enabled)
+  {
+    if(id == 0) fprintf(stdout, "\n>>>>>PC_HISTORGRAM<<<<<\n");
+    fprintf(stdout, "Size, %zu\n", pc_histogram.size());
+    for (auto it : pc_histogram) {
+      fprintf(stdout, "%0" PRIx64 ", %" PRIu64 "\n", it.first, it.second);
+    }
+  }
+#endif
 }
 
 static void bad_isa_string(const char* isa)
@@ -570,10 +577,14 @@ void processor_t::set_csr(int which, reg_t val)
       //This instruction should only succeed if the pc is in within the management enclave.
       if ((state.pc >= MANAGEMENT_ENCLAVE_BASE) && (state.pc < MANAGEMENT_ENCLAVE_BASE + MANAGEMENT_ENCLAVE_SIZE))
       {
+#ifdef PRAESIDIO_DEBUG
         fprintf(stderr, "processor.cc: Enclave ID on core %u changed to 0x%lx\n", id, val);
+#endif
         enclave_id = val;
       } else {
-        fprintf(stderr, "processor.cc: ERROR: pc was not in management enclave code 0x%lx", state.pc);
+#ifdef PRAESIDIO_DEBUG
+        fprintf(stderr, "processor.cc: WARNING: pc was not in management enclave code 0x%lx", state.pc);
+#endif
       }
       break;
     case CSR_MANAGECHANGEPAGETAG:
@@ -582,11 +593,15 @@ void processor_t::set_csr(int which, reg_t val)
       if(enclave_id == ENCLAVE_MANAGEMENT_ID) {
         if(val & DRAM_BASE) {
           int index = (val & (DRAM_BASE - 1)) / PGSIZE; //Assume DRAM_BASE is just one set bit.
+#ifdef PRAESIDIO_DEBUG
           fprintf(stderr, "processor.cc: Changing page %d to tag: %lu\n", index, state.arg_enclave_id);
+#endif
           page_owners[index].owner = state.arg_enclave_id;
         } else {
           //TODO enable tagging for pages in boot ROM and management pages.
-          fprintf(stderr, "processor.cc: Currently tagging pages outside of DRAM is not supported 0x%lx\n", val);
+#ifdef PRAESIDIO_DEBUG
+          fprintf(stderr, "processor.cc: WARNING: Currently tagging pages outside of DRAM is not supported 0x%lx\n", val);
+#endif
         }
       }
       break;
@@ -594,7 +609,9 @@ void processor_t::set_csr(int which, reg_t val)
       mailbox->source = enclave_id;
       mailbox->destination = state.arg_enclave_id;
       mailbox->content = val;
+#ifdef PRAESIDIO_DEBUG
       fprintf(stderr, "processor.cc: core %u sending mailbox message: source 0x%016lx, destination 0x%016lx, content 0x%016lx\n", id, mailbox->source, mailbox->destination, mailbox->content);
+#endif
       break;
     #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
   }
@@ -665,14 +682,15 @@ reg_t processor_t::get_csr(int which)
     for(size_t i = 0; i < num_of_mailboxes; i++) { //This should be done in parallel in hardware
       struct Message_t *message = &allMailboxes[i];
       if(message->destination == enclave_id) {
+#ifdef PRAESIDIO_DEBUG
         fprintf(stderr, "processor.cc: core %u at pc 0x%016lx found messages in box %lu, with message: source 0x%016lx, destination 0x%016lx, content 0x%016lx\n", id, state.pc, i, message->source, message->destination, message->content);
+#endif
         state.arg_enclave_id = message->source; //TODO this is a security problem.
         message->destination = ENCLAVE_INVALID_ID;
         message->source = ENCLAVE_INVALID_ID;
         return message->content;
-      } else if (message->destination != ENCLAVE_INVALID_ID) {
-        //fprintf(stderr, "processor.cc: Warning! enclave 0x%0lx message found but with wrong destintation identifier 0x%0lx\n", enclave_id, message->destination);
       }
+      //else if (message->destination != ENCLAVE_INVALID_ID) { fprintf(stderr, "processor.cc: Warning! enclave 0x%0lx message found but with wrong destintation identifier 0x%0lx\n", enclave_id, message->destination); }
     }
     state.arg_enclave_id = ENCLAVE_INVALID_ID;
     return 0;

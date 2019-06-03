@@ -72,9 +72,8 @@ void sendMessage(struct Message_t *txMsg) {
 }
 
 void receiveMessage(struct Message_t *rxMsg) {
-  enclave_id_t source;
+  enclave_id_t source = ENCLAVE_INVALID_ID;
   unsigned long contentAndType;
-  setArgumentEnclaveIdentifier(source);
   asm volatile (
     "csrrs %0, 0x411, zero"
     : "=r"(contentAndType) //output

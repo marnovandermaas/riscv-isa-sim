@@ -125,9 +125,9 @@ struct state_t
   reg_t tdata2[num_triggers];
 
   //Register to contain the identifier for enclave page communication system type instructions
-  #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-    reg_t arg_enclave_id;
-  #endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
+#ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
+  reg_t arg_enclave_id;
+#endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
 
   uint32_t fflags;
   uint32_t frm;
@@ -218,6 +218,8 @@ public:
   bool slow_path();
   bool halted() { return state.dcsr.cause ? true : false; }
   bool halt_request;
+
+  void output_histogram();
 
   // Return the index of a trigger that matched, or -1.
   inline int trigger_match(trigger_operation_t operation, reg_t address, reg_t data)

@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include "debug.h"
 
 volatile bool ctrlc_pressed = false;
 static void handle_signal(int sig)
@@ -39,13 +40,16 @@ void sim_t::request_halt(uint32_t id)
       }
     }
   }
-  // for(unsigned int i = 0; i < procs.size(); i++)
-  // {
-  //   fprintf(stderr, "Processor %u ended with instruction count %lu.\n", i, procs[i]->get_csr(CSR_MINSTRET));
-  // }
-  bool csv_style = false;
+  fprintf(stdout, "\n>>>>>INSTRUCTION_COUNT<<<<<\n%lu\n", procs[0]->get_csr(CSR_MINSTRET));
+  bool csv_style = true;
+#ifdef PRAESIDIO_DEBUG
+  csv_style = false;
+#endif
   while(true) {
-    if(csv_style) fprintf(stderr, "\n>>>>>CACHE_OUTPUT<<<<<\n");
+    if(csv_style) {
+      fprintf(stdout, "\n>>>>>CACHE_OUTPUT<<<<<\n");
+      //fprintf(stdout, "bytes read, bytes written, read accesses, write accesses, read misses, write misses, writebacks, miss rate, read misses in LLC, write misses in LLC, total miss rate\n");
+    }
     for(size_t i = 0; i < nenclaves + 1; i++)
     {
       if((ics[i] || dcs[i]) && !csv_style) fprintf(stderr, "\nCache stats for enclave %lu:\n", i);
@@ -75,6 +79,10 @@ void sim_t::request_halt(uint32_t id)
     if(csv_style) break;
     csv_style = true;
   }
+  for(unsigned int i = 0; i < procs.size(); i++)
+  {
+    procs[i]->output_histogram();
+  }
   exit(0);
 }
 
@@ -89,7 +97,9 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
     debug_module(this, progsize, max_bus_master_bits, require_authentication), ics(ics), dcs(dcs), l2(l2), rmts(rmts), static_llc(static_llc)
 {
   signal(SIGINT, &handle_signal);
+#ifdef PRAESIDIO_DEBUG
   fprintf(stderr, "sim.cc: Constructing simulator with %lu processors and %lu enclaves.\n", nprocs, nenclaves);
+#endif
 
   page_owners = new page_owner_t[num_of_pages];
   for(reg_t i = 0; i < num_of_pages; i++)
@@ -190,7 +200,9 @@ int sim_t::run()
 {
   host = context_t::current();
   target.init(sim_thread_main, this);
+#ifdef PRAESIDIO_DEBUG
   fprintf(stderr, "sim.cc: running htif.\n");
+#endif
   return htif_t::run();
 }
 
@@ -263,16 +275,17 @@ void sim_t::make_dtb()
   const int reset_vec_size = 8;
 
   if(start_pc == reg_t(-1)) {
+    start_pc = get_entry_point(); //This is the get_entry_point function of htif_t found in riscv fesvr
 #ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
     //TODO add the entry point to the management enclave code instead of hardcoding it.
-    //start_pc = get_entry_point(); //This is the get_entry_point function of htif_t found in riscv fesvr
-    start_pc = MANAGEMENT_ENCLAVE_BASE;
-#else
-    start_pc = get_entry_point();
+    if(nenclaves > 0) {
+      start_pc = MANAGEMENT_ENCLAVE_BASE;
+    }
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
   }
-
+#ifdef PRAESIDIO_DEBUG
   fprintf(stderr, "sim.cc: Adding boot rom with start_pc %016lx\n", start_pc);
+#endif
 
   uint32_t reset_vec[reset_vec_size + nenclaves + 1] = {
     0x297,                                      // auipc  t0,0x0
@@ -288,16 +301,17 @@ void sim_t::make_dtb()
     (uint32_t) (nenclaves & 0xffffffff)
   };
 
-  fprintf(stderr, "sim.cc: reset vector contents.\n");
-
   for (size_t i = 0; i < nenclaves; i++) {
     //TODO actually use the procs.id value
     reset_vec[i + 1 + reset_vec_size] = procs.size() - nenclaves + i; //This statement assumes all ids are from 0..procs.size()-1
   }
 
+#ifdef PRAESIDIO_DEBUG
+  fprintf(stderr, "sim.cc: reset vector contents.\n");
   for(size_t i = 0; i < reset_vec_size + nenclaves + 1; i++) {
     fprintf(stderr, "sim.cc: 0x%08x,\n", reset_vec[i]);
   }
+#endif
 
   std::vector<char> rom((char*)reset_vec, (char*)reset_vec + sizeof(reset_vec));
 
@@ -321,7 +335,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
       return mem->contents() + (addr - desc.first);
     }
   }
-  fprintf(stderr, "sim.cc: ERROR returning NULL for address to memory.\n");
+  fprintf(stderr, "sim.cc: ERROR returning NULL for address to memory: 0x%016lx.\n", addr);
   exit(-1);
   return NULL;
 }

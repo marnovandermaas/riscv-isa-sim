@@ -72,7 +72,7 @@ public:
 
   inline void misaligned_store(reg_t addr, reg_t data, size_t size)
   {
-    fprintf(stderr, "mmu.h: misaligned_store.\n");
+    //fprintf(stderr, "mmu.h: misaligned_store.\n");
 #ifdef RISCV_ENABLE_MISALIGNED
     for (size_t i = 0; i < size; i++)
       store_uint8(addr + i, data >> (i * 8));

@@ -12,9 +12,6 @@ entry:
 
 enclave:
   call  initialize
-  la    t1, __offset
-  add   t2, a0, t1
-  add   sp, t2, t1 #TODO currently this assumes the stack for enclaves is always 1 page on beyond the code...
   jalr  x0, a0, 0
 
 normal:

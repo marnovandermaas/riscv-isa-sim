@@ -3,6 +3,7 @@
 
 #include <stdarg.h>
 #include <stddef.h>
+#include <stdint.h>
 
 typedef signed char __int8_t;
 typedef unsigned char __uint8_t;
@@ -37,13 +38,19 @@ typedef struct _FILE {
 } FILE;
 int fflush(FILE *);
 int fprintf(FILE *, const char *, ...);
-int printf(const char *, ...);
 int rename(const char *, const char *);
 
 int sscanf(const char *, const char *, ...);
 int snprintf(char *, size_t, const char *, ...);
 int vfprintf(FILE *, const char *, va_list);
-int vsnprintf(char *, size_t, const char *, va_list);
+int	kvprintf(char const *fmt, void (*func)(int, void*), void *arg, int radix, va_list ap);
+int	vsprintf(char *buf, const char *cfmt, va_list ap);
+int	vsnprintf(char *str, size_t size, const char *format, va_list ap);
+int	printf(const char *fmt, ...);
+int	vprintf(const char *fmt, va_list ap);
+int	puts(const char *s);
+int putchar(int character);
+
 /*
  * The following definitions are not required by the OCaml runtime, but are
  * needed to build the freestanding version of GMP used by Mirage.
@@ -60,6 +67,9 @@ int fputc(int, FILE *);
 int putc(int, FILE *);
 int ferror(FILE *);
 extern int puts(const char *string);
+
+
+
 
 
 

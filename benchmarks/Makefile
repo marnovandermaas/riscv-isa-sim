@@ -16,7 +16,7 @@ endif
 
 LIBC_DIR = $(MANAGE_DIR)/nolibc
 
-LIBCFLAGS = $(CCFLAGS) -I. -I$(MANAGE_DIR)/include -I$(LIBC_DIR)/include  -std=c99 -Wall -Werror -Wno-parentheses -Wno-unused-variable -Wno-unused-but-set-variable#-O2 -std=c99 -Wall  -Werror
+LIBCFLAGS = $(CCFLAGS) -I. -I$(MANAGE_DIR)/include -I$(LIBC_DIR)/include -std=c99 -Wall -Werror -Wno-parentheses -Wno-unused-variable -Wno-unused-but-set-variable#-O2 -std=c99 -Wall  -Werror
 
 
 Enclave_Link_Flags=-L$(BUILD_DIR) 
@@ -30,7 +30,8 @@ LIBC_OBJS=$(BUILD_DIR)/ctype.o \
      $(BUILD_DIR)/strcmp.o $(BUILD_DIR)/strlen.o $(BUILD_DIR)/strtol.o $(BUILD_DIR)/strchr.o $(BUILD_DIR)/strchrnul.o $(BUILD_DIR)/strncpy.o $(BUILD_DIR)/stpncpy.o \
      $(BUILD_DIR)/strstr.o \
      $(BUILD_DIR)/stubs.o \
-     $(BUILD_DIR)/vfprintf.o $(BUILD_DIR)/vsnprintf.o $(BUILD_DIR)/snprintf.o $(BUILD_DIR)/fprintf.o $(BUILD_DIR)/printf.o $(BUILD_DIR)/puts.o $(BUILD_DIR)/frexp.o $(BUILD_DIR)/sysdeps_riscv.o $(BUILD_DIR)/riscv_spec.o
+	 $(BUILD_DIR)/printf.o $(BUILD_DIR)/frexp.o $(BUILD_DIR)/sysdeps_riscv.o $(BUILD_DIR)/riscv_spec.o #$(BUILD_DIR)/vfprintf.o $(BUILD_DIR)/vsnprintf.o $(BUILD_DIR)/snprintf.o $(BUILD_DIR)/fprintf.o $(BUILD_DIR)/puts.o 
+
 
 
 DEFAULTBUILD = hello

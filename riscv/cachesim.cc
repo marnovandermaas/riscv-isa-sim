@@ -88,18 +88,19 @@ void cache_sim_t::print_stats(bool csv_style)
     return;
   }
 
-  float mr = 100.0f*(read_misses+write_misses)/(read_accesses+write_accesses);
+  float mr = 1.0f * (read_misses+write_misses)/(read_accesses+write_accesses);
 
   std::cout << std::setprecision(3) << std::fixed;
   if(csv_style) {
-    std::cout <<  bytes_read << ", " <<
+    std::cout <<  name << ", " <<
+                  bytes_read << ", " <<
                   bytes_written << ", " <<
                   read_accesses << ", " <<
                   write_accesses << ", " <<
                   read_misses << ", " <<
                   write_misses << ", " <<
                   writebacks << ", " <<
-                  mr << ", ";
+                  mr;
   } else {
     std::cout << name << " ";
     std::cout << "Bytes Read:            " << bytes_read << std::endl;
@@ -116,7 +117,7 @@ void cache_sim_t::print_stats(bool csv_style)
     std::cout << name << " ";
     std::cout << "Writebacks:            " << writebacks << std::endl;
     std::cout << name << " ";
-    std::cout << "Miss Rate:             " << mr << '%' << std::endl;
+    std::cout << "Miss Rate:             " << mr << std::endl;
   }
 }
 
@@ -284,13 +285,21 @@ void remapping_table_t::print_stats(bool csv_style)
     std::cout << "No stats recorded" << std::endl;
     return;
   }
+  float new_mr = 1.0f *
+        (cache_sim_t::read_misses + cache_sim_t::write_misses + llc_read_misses + llc_write_misses)
+        /
+        (cache_sim_t::read_accesses + cache_sim_t::write_accesses);
   if(csv_style) {
-    std::cout << llc_read_misses << ", " << llc_write_misses;
+    std::cout <<  ", " << llc_read_misses <<
+                  ", " << llc_write_misses <<
+                  ", " << new_mr;
   } else {
     std::cout << name << " ";
     std::cout << "Read Misses in LLC:          " << llc_read_misses << std::endl;
     std::cout << name << " ";
     std::cout << "Write Misses in LLC:            " << llc_write_misses << std::endl;
+    std::cout << name << " ";
+    std::cout << "Total miss rate:            " << new_mr << std::endl;
   }
 }
 
