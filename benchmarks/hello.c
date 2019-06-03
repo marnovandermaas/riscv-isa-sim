@@ -68,11 +68,11 @@ void enclave_world() {
 }
 
 int main() {
-  int id = getCurrentEnclaveID();
+   int id = getCurrentEnclaveID();
 
    const char* src = "this is from src!\n";
    char dest[50];
-   strncpy(dest,src, strlen(src)+1);
+  strncpy(dest,src, strlen(src)+1);
    printf(dest);
    printf("Before memcpy dest = %s\n", dest);
    memcpy(dest, src, strlen(src)+1);

@@ -14,7 +14,7 @@ CCFLAGS += -g -Og
 
 endif
 
-LIBC_DIR = $(MANAGE_DIR)/nolibc
+LIBC_DIR = nolibc
 
 LIBCFLAGS = $(CCFLAGS) -I. -I$(MANAGE_DIR)/include -I$(LIBC_DIR)/include -std=c99 -Wall -Werror -Wno-parentheses -Wno-unused-variable -Wno-unused-but-set-variable#-O2 -std=c99 -Wall  -Werror
 
