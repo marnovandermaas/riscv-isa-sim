@@ -11,7 +11,6 @@
 #define __stdin 1
 #define __stdout 2 
 #define __stderr 3
-#define fprintf fprintf_temp
 
 
 void normal_world() {
@@ -116,13 +115,12 @@ int main() {
    printf("Before memcpy dest = %s\n", dest);
    memcpy(dest, src, strlen(src)+1);
    printf("heyyyy %s and %d \n",dest, 1234);
-   fprintf(__stderr,"hey again%d\n", 1234);
 
 
 
   // return(0);
 /* ZTODO: it breaks after that */
-
+/*
   if(id == ENCLAVE_DEFAULT_ID) {
     normal_world();
   } else if (id == 1) {
@@ -130,6 +128,6 @@ int main() {
   } else {
     //Do nothing if you are any other enclave.
   }
-
+*/
   
 }
