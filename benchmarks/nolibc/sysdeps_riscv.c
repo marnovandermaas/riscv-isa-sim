@@ -154,7 +154,12 @@ void *sbrk(intptr_t increment)
 #endif
 
 /* inline the dlmalloc implementation into this module */
+
+#ifndef DEFINE_MALLOC
+
 #include "dlmalloc.i"
+#endif
+
 
 /*
  * When adding new functions to this module, add them BEFORE the "dlmalloc

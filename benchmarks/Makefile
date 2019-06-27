@@ -4,7 +4,7 @@ DEBUG_ENABLED ?=1
 INCLUDE_DIR = include
 BUILD_DIR = build
 MANAGE_DIR = ../managementenclave
-CCFLAGS = -nostdlib -mcmodel=medany -T$(INCLUDE_DIR)/link.ld #Flags telling GCC to compile without libraries (e.g. baremetal), to use a differen memory model so that we can put our code at 0x80000000 and to use the specified linker script.
+CCFLAGS = -nostdlib -mcmodel=medany -T$(INCLUDE_DIR)/link.ld -Werror-implicit-function-declaration -DDEFINE_MALLOC -DDEFINE_FREE #Flags telling GCC to compile without libraries (e.g. baremetal), to use a differen memory model so that we can put our code at 0x80000000 and to use the specified linker script.
 DEPS = init praesidio
 
 CCFLAGS += -I$(MANAGE_DIR)
@@ -16,7 +16,7 @@ endif
 
 LIBC_DIR = nolibc
 
-LIBCFLAGS = $(CCFLAGS) -I. -I$(MANAGE_DIR)/include -I$(LIBC_DIR)/include -std=c99 -Wall -Werror -Wno-parentheses -Wno-unused-variable -Wno-unused-but-set-variable#-O2 -std=c99 -Wall  -Werror
+LIBCFLAGS = $(CCFLAGS) -I. -I$(MANAGE_DIR)/include -I$(LIBC_DIR)/include -std=c99 -Wall -Werror -Wno-parentheses -Wno-unused-variable #-O2 -std=c99 -Wall  -Werror
 
 
 Enclave_Link_Flags=-L$(BUILD_DIR) 
@@ -24,13 +24,16 @@ Enclave_Link_Flags=-L$(BUILD_DIR)
 OBJS=$(BUILD_DIR)/init.o $(BUILD_DIR)/praesidio.o $(BUILD_DIR)/instructions.o  $(BUILD_DIR)/hello.o
 
 LIBC_OBJS=$(BUILD_DIR)/ctype.o \
-    $(BUILD_DIR)/dtoa.o  \
+  	 $(BUILD_DIR)/dtoa.o  \
 	 $(BUILD_DIR)/float.o \
      $(BUILD_DIR)/memchr.o $(BUILD_DIR)/memcmp.o $(BUILD_DIR)/memcpy.o $(BUILD_DIR)/memmove.o $(BUILD_DIR)/memset.o \
      $(BUILD_DIR)/strcmp.o $(BUILD_DIR)/strlen.o $(BUILD_DIR)/strtol.o $(BUILD_DIR)/strchr.o $(BUILD_DIR)/strchrnul.o $(BUILD_DIR)/strncpy.o $(BUILD_DIR)/stpncpy.o \
      $(BUILD_DIR)/strstr.o \
      $(BUILD_DIR)/stubs.o \
-	 $(BUILD_DIR)/printf.o $(BUILD_DIR)/frexp.o $(BUILD_DIR)/sysdeps_riscv.o $(BUILD_DIR)/riscv_spec.o #$(BUILD_DIR)/vfprintf.o $(BUILD_DIR)/vsnprintf.o $(BUILD_DIR)/snprintf.o $(BUILD_DIR)/fprintf.o $(BUILD_DIR)/puts.o 
+	 $(BUILD_DIR)/printf.o \
+	 $(BUILD_DIR)/tiny-malloc.o \
+	 $(BUILD_DIR)/frexp.o \
+	 $(BUILD_DIR)/sysdeps_riscv.o $(BUILD_DIR)/riscv_spec.o #$(BUILD_DIR)/vfprintf.o $(BUILD_DIR)/vsnprintf.o $(BUILD_DIR)/snprintf.o $(BUILD_DIR)/fprintf.o $(BUILD_DIR)/puts.o 
 
 
 

@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
+
 //#include "praesidio.h"
 
 #define INPUT_LEN (10)
@@ -67,6 +69,7 @@ void enclave_world() {
   }
 }
 
+
 int main() {
    int id = getCurrentEnclaveID();
 
@@ -77,6 +80,14 @@ int main() {
    printf("Before memcpy dest = %s\n", dest);
    memcpy(dest, src, strlen(src)+1);
    printf("heyyyy %s and %d \n",dest, 1234);
+   
+#ifdef DEFINE_MALLOC
+   void * test=malloc(100);
+   if(test == NULL)
+      printf("malloc not working\n");
+   else printf("malloc is working\n");
+
+  #endif 
 
 
 
