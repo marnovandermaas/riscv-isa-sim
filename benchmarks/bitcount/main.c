@@ -44,7 +44,7 @@ int main_hongyan()
 
     iterations=ITERATIONS;
 
-    output_string("Bit counter algorithm benchmark\n");
+    printf("Bit counter algorithm benchmark\n");
 
     for(int iter=0; iter<BITCOUNT_ITER; iter++) {
         for(i = 0; i < FUNCS; i++) {
