@@ -1,3 +1,4 @@
+.vscode
 tests/ebreak
 tests/spike.log
 tests/__pycache__
