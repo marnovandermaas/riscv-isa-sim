@@ -23,7 +23,7 @@ do
   for SETS_POWER in {6..12}
   do
     SHARED_CACHE_SETS=$((1<<SETS_POWER))
-    spike --ic=$INSTRUCTION_CACHE --dc=$DATA_CACHE --l2=$SHARED_CACHE_SETS$CACHE_WAYS_AND_BLOCK_SIZE -p1 --enclave=1 -m1024 --l2_partitioning=$PARTITIONING_SCHEME aes.out > $OUTPUT_DIR/aes-$PARTITIONING_SCHEME-$SHARED_CACHE_SETS-.log
+    spike --ic=$INSTRUCTION_CACHE --dc=$DATA_CACHE --l2=$SHARED_CACHE_SETS$CACHE_WAYS_AND_BLOCK_SIZE -p1 --enclave=1 -m1024 --l2_partitioning=$PARTITIONING_SCHEME aes.out > $OUTPUT_DIR/aes-$PARTITIONING_SCHEME-$SHARED_CACHE_SETS-$EXP_NUMBER.log
   done
 done
-python3 tools/interpretcache.py $OUTPUT_DIR/interpret_aes_cache.csv output/aes-*-.log
+python3 tools/interpretcache.py $OUTPUT_DIR/interpret_aes_cache.csv output/aes-*-$EXP_NUMBER.log
