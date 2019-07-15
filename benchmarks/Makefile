@@ -8,6 +8,7 @@ BITCNT_DIR = bitcount
 AES_DIR = aes
 CCFLAGS = -nostdlib -mcmodel=medany -T$(INCLUDE_DIR)/link.ld -Werror-implicit-function-declaration -DDEFINE_MALLOC -DDEFINE_FREE #Flags telling GCC to compile without libraries (e.g. baremetal), to use a differen memory model so that we can put our code at 0x80000000 and to use the specified linker script.
 DEPS = init praesidio
+SUFFIX ?=1
 
 CCFLAGS += -I$(MANAGE_DIR)
 CCFLAGS += -I$(INCLUDE_DIR)
@@ -40,7 +41,7 @@ LIBC_OBJS=$(BUILD_DIR)/ctype.o \
 
 
 
-DEFAULTBUILD = hello
+DEFAULTBUILD = hello.out
 
 all: hello startenclaves bitcount bandwidth latency aes
 
@@ -115,6 +116,12 @@ dump:
 
 run:
 	./runTests.sh
+
+run_updated:
+	./runTests_update.sh $(SUFFIX)
+
+test:
+	spike --ic=16:1:8 --dc=16:1:8 --l2=128:1:8 -p1 --enclave=1 -m1024 --l2_partitioning=1 $(DEFAULTBUILD)
 
 #not supported yet
 remote_debug:
