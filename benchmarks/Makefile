@@ -6,7 +6,7 @@ BUILD_DIR = build
 MANAGE_DIR = ../managementenclave
 BITCNT_DIR = bitcount
 AES_DIR = aes
-CCFLAGS = -nostdlib -mcmodel=medany -T$(INCLUDE_DIR)/link.ld -Werror-implicit-function-declaration -DDEFINE_MALLOC -DDEFINE_FREE #Flags telling GCC to compile without libraries (e.g. baremetal), to use a differen memory model so that we can put our code at 0x80000000 and to use the specified linker script.
+CCFLAGS = -nostdlib -mcmodel=medany -T$(INCLUDE_DIR)/link.ld -Werror-implicit-function-declaration -DDEFINE_MALLOC -DDEFINE_FREE -O #Flags telling GCC to compile without libraries (e.g. baremetal), to use a differen memory model so that we can put our code at 0x80000000 and to use the specified linker script.
 DEPS = init praesidio
 SUFFIX ?=1
 

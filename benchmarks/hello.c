@@ -5,36 +5,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-//#include "praesidio.h"
-
 #define INPUT_LEN (10)
 #define OUTPUT_LEN (16)
 #define NUMBER_OF_NAMES (10)
 
 #define __stdin 1
-#define __stdout 2 
+#define __stdout 2
 #define __stderr 3
-
-#define NUMBER_OF_ENCLAVE_PAGES (5)
 
 void normal_world() {
   //This is the code that runs in the normal world.
   char name[INPUT_LEN] = "Marno";
-  long page_num = 2;
   volatile char *address;
-  char *input = (char *) PAGE_TO_POINTER(page_num);
+  char *input = (char *) COMMUNICATION_PAGES_BASE;
   char read_buffer[OUTPUT_LEN];
 
-  char *enclaveMemory = (char *) DRAM_BASE + NUMBER_OF_ENCLAVE_PAGES*PAGE_SIZE;
-  char *enclavePages[NUMBER_OF_ENCLAVE_PAGES];
-  for(int i = 0; i < NUMBER_OF_ENCLAVE_PAGES; i++) {
-    enclavePages[i] = enclaveMemory;
-    enclaveMemory += PAGE_SIZE;
-  }
-  enclave_id_t myEnclave = start_enclave((char *) DRAM_BASE, NUMBER_OF_ENCLAVE_PAGES, enclavePages);
+  enclave_id_t myEnclave = start_enclave();
   if(myEnclave == ENCLAVE_INVALID_ID) return;
 
-  give_read_permission(page_num, myEnclave);
+  give_read_permission(((int) input - DRAM_BASE) >> 12, myEnclave);
   address = get_receive_mailbox_base_address(myEnclave);
 
   for (int i = 0; i < NUMBER_OF_NAMES; i++) {
@@ -50,15 +39,14 @@ void normal_world() {
 void enclave_world() {
   //This is the code that runs in the enclave world.
   volatile char *address;
-  long page_num = 8;
-  char *output = (char *) PAGE_TO_POINTER(page_num);
+  char *output = (char *) COMMUNICATION_PAGES_BASE + NUMBER_OF_ENCLAVE_PAGES*PAGE_SIZE;
   char read_buffer[INPUT_LEN+3];
 
   read_buffer[0] = 'H';
   read_buffer[1] = 'i';
   read_buffer[2] = ' ';
 
-  give_read_permission(page_num, ENCLAVE_DEFAULT_ID);
+  give_read_permission(((int) output - DRAM_BASE) >> 12, ENCLAVE_DEFAULT_ID);
   address = get_receive_mailbox_base_address(ENCLAVE_DEFAULT_ID);
 
   for (int i = 0; i < NUMBER_OF_NAMES; i++) {
@@ -80,14 +68,14 @@ int main() {
    printf("Before memcpy dest = %s\n", dest);
    memcpy(dest, src, strlen(src)+1);
    printf("heyyyy %s and %d \n",dest, 1234);
-   
-#ifdef DEFINE_MALLOC
-   void * test=malloc(100);
-   if(test == NULL)
-      printf("malloc not working\n");
-   else printf("malloc is working\n");
 
-  #endif 
+// #ifdef DEFINE_MALLOC
+//    void * test=malloc(100);
+//    if(test == NULL)
+//       printf("malloc not working\n");
+//    else printf("malloc is working\n");
+//
+//   #endif
 
 
 
@@ -102,5 +90,5 @@ int main() {
     //Do nothing if you are any other enclave.
   }
 
-  
+
 }

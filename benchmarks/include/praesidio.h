@@ -5,7 +5,13 @@
 #include "instructions.h"
 #include "../riscv/encoding.h"
 
-// PGSIZE (1 << 12)
+#define NUMBER_OF_ENCLAVE_PAGES (64)
+#define NUMBER_OF_STACK_PAGES (4)
+#define NUMBER_OF_COMMUNICATION_PAGES (1)
+
+#define STACK_PAGES_BASE (0xA0000000)
+#define COMMUNICATION_PAGES_BASE (0xB0000000)
+
 #define PAGE_TO_POINTER(NUM) (((NUM * (1 << 12)) | DRAM_BASE))
 
 void give_read_permission(int pageNumber, enclave_id_t receiver_id);
@@ -29,7 +35,7 @@ void output_hexbyte(unsigned char c);
 //Writes a whole string to display
 void output_string(char *s);
 
-enclave_id_t start_enclave(char *source_page, unsigned int num_donated_pages, char **array_of_page_addresses);
+enclave_id_t start_enclave();//(char *source_page, unsigned int num_donated_pages, char **array_of_page_addresses);
 
 
 #endif //PRAESIDIO_HEADER

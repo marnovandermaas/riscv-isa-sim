@@ -119,11 +119,26 @@ void output_string(char *s) {
   }
 }
 
-
-enclave_id_t start_enclave(char *source_page, unsigned int num_donated_pages, char **array_of_page_addresses) {
-  if(num_donated_pages < 5) {
-    return ENCLAVE_INVALID_ID;
+int enclave_number = 0;
+enclave_id_t start_enclave() {
+  enclave_number++;
+  char *enclaveMemory = (char *) DRAM_BASE + NUMBER_OF_ENCLAVE_PAGES*PAGE_SIZE*enclave_number;
+  char *enclavePages[NUMBER_OF_ENCLAVE_PAGES + NUMBER_OF_STACK_PAGES + NUMBER_OF_COMMUNICATION_PAGES];
+  for(int i = 0; i < NUMBER_OF_ENCLAVE_PAGES; i++) {
+    enclavePages[i] = enclaveMemory;
+    enclaveMemory += PAGE_SIZE;
   }
+  enclaveMemory = (char *) STACK_PAGES_BASE + NUMBER_OF_ENCLAVE_PAGES*PAGE_SIZE*enclave_number;
+  for(int i = 0; i < NUMBER_OF_STACK_PAGES; i++) {
+    enclaveMemory -= PAGE_SIZE;
+    enclavePages[i+NUMBER_OF_ENCLAVE_PAGES] = enclaveMemory;
+  }
+  enclaveMemory = (char *) COMMUNICATION_PAGES_BASE + NUMBER_OF_ENCLAVE_PAGES*PAGE_SIZE*enclave_number;
+  for(int i = 0; i < NUMBER_OF_COMMUNICATION_PAGES; i++) {
+    enclavePages[i+NUMBER_OF_ENCLAVE_PAGES+NUMBER_OF_STACK_PAGES] = enclaveMemory;
+    enclaveMemory += PAGE_SIZE;
+  }
+
   struct Message_t message;
   struct Message_t response;
   enclave_id_t currentEnclave = getCurrentEnclaveID();
@@ -132,12 +147,14 @@ enclave_id_t start_enclave(char *source_page, unsigned int num_donated_pages, ch
   message.type = MSG_CREATE_ENCLAVE;
   message.content = 0;
   sendMessage(&message);
-  for(int i = 0; i < 2*PAGE_SIZE; i++) {
-    array_of_page_addresses[0][i] = source_page[i];
-  }
   do {
     receiveMessage(&response);
   } while(response.source != ENCLAVE_MANAGEMENT_ID);
+  for(int i = 0; i < NUMBER_OF_ENCLAVE_PAGES; i++) {
+    for(int j = 0; j < PAGE_SIZE; j++) {
+      enclavePages[i][j] = ((char *) DRAM_BASE)[j+i*PAGE_SIZE];
+    }
+  }
   enclave_id_t myEnclave = response.content;
   message.type = MSG_SET_ARGUMENT;
   message.content = myEnclave;
@@ -145,9 +162,9 @@ enclave_id_t start_enclave(char *source_page, unsigned int num_donated_pages, ch
   do {
     receiveMessage(&response);
   } while(response.source != ENCLAVE_MANAGEMENT_ID);
-  for(unsigned int i = 0; i < num_donated_pages; i++) {
+  for(unsigned int i = 0; i < NUMBER_OF_ENCLAVE_PAGES + NUMBER_OF_STACK_PAGES + NUMBER_OF_COMMUNICATION_PAGES; i++) {
     message.type = MSG_DONATE_PAGE;
-    message.content = (unsigned long) array_of_page_addresses[i]; //This is the page for enclave memory
+    message.content = (unsigned long) enclavePages[i]; //This is the page for enclave memory
     sendMessage(&message);
     do {
       receiveMessage(&response);

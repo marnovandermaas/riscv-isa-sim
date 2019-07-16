@@ -11,8 +11,6 @@
 #define IV_POSITION (KEY_POSITION + AES_KEYLEN)
 #define LENGTH_POSITION (IV_POSITION + AES_BLOCKLEN)
 
-#define NUMBER_OF_ENCLAVE_PAGES (5)
-
 //This is the code that runs in the normal world.
 void normal_world() {
   //Setting up encryption related variables.
@@ -36,21 +34,14 @@ void normal_world() {
   output_char('\n');
 
   //Starting enclave
-  char *enclaveMemory = (char *) DRAM_BASE + 6*PAGE_SIZE;
-  char *enclavePages[NUMBER_OF_ENCLAVE_PAGES];
-  for(int i = 0; i < NUMBER_OF_ENCLAVE_PAGES; i++) {
-    enclavePages[i] = enclaveMemory;
-    enclaveMemory += PAGE_SIZE;
-  }
-  enclave_id_t myEnclave = start_enclave((char *) DRAM_BASE, NUMBER_OF_ENCLAVE_PAGES, enclavePages);
+  enclave_id_t myEnclave = start_enclave();
   if(myEnclave == ENCLAVE_INVALID_ID) return;
 
   //Setting up enclave related variables.
-  long page_num = 2;
   volatile char *address;
-  char *input = (char *) PAGE_TO_POINTER(page_num);
+  char *input = (char *) COMMUNICATION_PAGES_BASE;
   char read_buffer[length];
-  give_read_permission(page_num, myEnclave);
+  give_read_permission(((int) input - DRAM_BASE) >> 12, myEnclave);
   address = get_receive_mailbox_base_address(myEnclave);
 
   //Preparing the encryption message.
@@ -88,7 +79,7 @@ void normal_world() {
     if(read_buffer[i] != content[i]) success = BOOL_FALSE;
   }
   output_char('\n');
-  
+
   output_string("AES TEST: ");
   if(success == BOOL_TRUE)  output_string("SUCCESS!\n");
   else                      output_string("FAIL!\n");
@@ -129,13 +120,12 @@ int do_aes(char *output, char *input) {
 void enclave_world() {
 
   volatile char *address;
-  long page_num = NUMBER_OF_ENCLAVE_PAGES+3;
-  char *output = (char *) PAGE_TO_POINTER(page_num);
+  char *output = (char *) COMMUNICATION_PAGES_BASE + NUMBER_OF_ENCLAVE_PAGES*PAGE_SIZE;
   char read_buffer[10*AES_BLOCKLEN];
   char write_buffer[10*AES_BLOCKLEN];
   int length;
 
-  give_read_permission(page_num, ENCLAVE_DEFAULT_ID);
+  give_read_permission(((int) output - DRAM_BASE) >> 12, ENCLAVE_DEFAULT_ID);
   address = get_receive_mailbox_base_address(ENCLAVE_DEFAULT_ID);
 
   for(int i = 0; i < 2; i++) {
