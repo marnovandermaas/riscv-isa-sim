@@ -4,7 +4,7 @@ INCLUDE_DIR = include
 BUILD_DIR = build
 MANAGE_DIR = ../managementenclave/
 BITCNT_DIR = bitcount
-CCFLAGS = -nostdlib -mcmodel=medany -T$(INCLUDE_DIR)/link.ld #Flags telling GCC to compile without libraries (e.g. baremetal), to use a differen memory model so that we can put our code at 0x80000000 and to use the specified linker script.
+CCFLAGS = -nostdlib -mcmodel=medany -T$(INCLUDE_DIR)/link.ld -O #Flags telling GCC to compile without libraries (e.g. baremetal), to use a differen memory model so that we can put our code at 0x80000000 and to use the specified linker script.
 #TODO split CCFLAGS and LDFLAGS
 DEPS = init praesidio
 LINK_FILES = $(BUILD_DIR)/init.o $(BUILD_DIR)/praesidio.o $(BUILD_DIR)/instructions.o
