@@ -1,12 +1,12 @@
 #include "praesidio.h"
 
-#define NUM_OF_ENCLAVES 14 // This is the amount of enclave data that fit in one enclave data page. (126-33) //ascii val for ! up to ascii val for ~
+#define NUM_OF_ENCLAVES 28 // This is the amount of enclave data that fit in one enclave data page. (126-33) //ascii val for ! up to ascii val for ~
 
 void normal_world() {
   //This is the code that runs in the normal world.
 
   for(int i = 0; i < NUM_OF_ENCLAVES; i++) {
-    enclave_id_t myEnclave = start_enclave();
+    enclave_id_t myEnclave = start_enclave_fast(5);
     if(myEnclave == ENCLAVE_INVALID_ID) return;
   }
 }

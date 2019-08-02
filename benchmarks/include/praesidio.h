@@ -35,7 +35,9 @@ void output_hexbyte(unsigned char c);
 //Writes a whole string to display
 void output_string(char *s);
 
-enclave_id_t start_enclave();//(char *source_page, unsigned int num_donated_pages, char **array_of_page_addresses);
+enclave_id_t start_enclave();
+
+enclave_id_t start_enclave_fast(unsigned int num_pages_to_copy);
 
 
 #endif //PRAESIDIO_HEADER

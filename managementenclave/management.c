@@ -34,9 +34,9 @@ void flushL1Cache() {
   //TODO flush all entries in this core's L1 cache
 }
 
-void fillPage(Address_t baseAddress, char value) {
-  char *basePointer = (char *) baseAddress;
-  for(int i = 0; i < PAGE_SIZE; i++) {
+void fillPage(Address_t baseAddress, long value) {
+  long *basePointer = (long *) baseAddress;
+  for(int i = 0; i < PAGE_SIZE/8; i++) {
     basePointer[i] = value;
   }
 }
@@ -77,7 +77,7 @@ int createEnclave() {
   struct EnclaveData_t *enclaveData = (struct EnclaveData_t *) ENCLAVE_DATA_BASE_ADDRESS;
   int i;
   for(i = 0; ; i++) {
-    if(i >= PAGE_SIZE / sizeof(struct EnclaveData_t)) {
+    if(i >= 2*PAGE_SIZE / sizeof(struct EnclaveData_t)) {
       return -1;
     }
     if(enclaveData[i].eID == ENCLAVE_INVALID_ID) {
@@ -102,7 +102,7 @@ enum boolean donatePage(enclave_id_t recipient, Address_t page_base) {
   struct EnclaveData_t *enclaveData = (struct EnclaveData_t *) ENCLAVE_DATA_BASE_ADDRESS;
   int i;
   for(i = 0; ; i++) {
-    if(i >= PAGE_SIZE / sizeof(struct EnclaveData_t)) {
+    if(i >= 2*PAGE_SIZE / sizeof(struct EnclaveData_t)) {
 #ifdef PRAESIDIO_DEBUG
       output_string("Donate Page: enclaveID ERROR!\n");
 #endif
@@ -163,7 +163,7 @@ Address_t waitForEnclave() {
       enclaveData = (struct EnclaveData_t *) ENCLAVE_DATA_BASE_ADDRESS; //TODO make this dependent on the received message.
       int i;
       for(i = 0; ; i++) {
-        if(i >= PAGE_SIZE / sizeof(struct EnclaveData_t)) {
+        if(i >= 2*PAGE_SIZE / sizeof(struct EnclaveData_t)) {
 #ifdef PRAESIDIO_DEBUG
           output_string("waitForEnclave: ERROR enclave entry point not found!\n");
 #endif
@@ -272,10 +272,10 @@ Address_t initialize() {
     putPageEntry(MANAGEMENT_CODE_BASE_ADDRESS, ENCLAVE_MANAGEMENT_ID);
     putPageEntry(PAGE_DIRECTORY_BASE_ADDRESS, ENCLAVE_MANAGEMENT_ID);
     putPageEntry(ENCLAVE_DATA_BASE_ADDRESS, ENCLAVE_MANAGEMENT_ID);
-    fillPage(PAGE_DIRECTORY_BASE_ADDRESS, 0xFF);
-    fillPage(ENCLAVE_DATA_BASE_ADDRESS, 0x00);
+    fillPage(PAGE_DIRECTORY_BASE_ADDRESS, 0xFFFFFFFFFFFFFFFF);
+    fillPage(ENCLAVE_DATA_BASE_ADDRESS, 0x0000000000000000); //Fill the second page as well.
     struct EnclaveData_t *enclaveDataPointer = (struct EnclaveData_t *) ENCLAVE_DATA_BASE_ADDRESS;
-    for(int i = 0; i < PAGE_SIZE / sizeof(struct EnclaveData_t); i++) {
+    for(int i = 0; i < 2*PAGE_SIZE / sizeof(struct EnclaveData_t); i++) {
 #ifdef PRAESIDIO_DEBUG
       output_string("management.c: clearing enclave data\n");
 #endif

@@ -119,23 +119,33 @@ void output_string(char *s) {
   }
 }
 
-int enclave_number = 0;
 enclave_id_t start_enclave() {
+  start_enclave_fast(NUMBER_OF_ENCLAVE_PAGES);
+}
+
+int enclave_number = 0;
+enclave_id_t start_enclave_fast(unsigned int num_pages_to_copy) {
   enclave_number++;
+  unsigned int number_of_enclave_pages = 0;
+  if(num_pages_to_copy > NUMBER_OF_ENCLAVE_PAGES || num_pages_to_copy == 0) {
+    number_of_enclave_pages = NUMBER_OF_ENCLAVE_PAGES;
+  } else {
+    number_of_enclave_pages = num_pages_to_copy;
+  }
   char *enclaveMemory = (char *) DRAM_BASE + NUMBER_OF_ENCLAVE_PAGES*PAGE_SIZE*enclave_number;
-  char *enclavePages[NUMBER_OF_ENCLAVE_PAGES + NUMBER_OF_STACK_PAGES + NUMBER_OF_COMMUNICATION_PAGES];
-  for(int i = 0; i < NUMBER_OF_ENCLAVE_PAGES; i++) {
+  char *enclavePages[number_of_enclave_pages + NUMBER_OF_STACK_PAGES + NUMBER_OF_COMMUNICATION_PAGES];
+  for(int i = 0; i < number_of_enclave_pages; i++) {
     enclavePages[i] = enclaveMemory;
     enclaveMemory += PAGE_SIZE;
   }
   enclaveMemory = (char *) STACK_PAGES_BASE + NUMBER_OF_ENCLAVE_PAGES*PAGE_SIZE*enclave_number;
   for(int i = 0; i < NUMBER_OF_STACK_PAGES; i++) {
     enclaveMemory -= PAGE_SIZE;
-    enclavePages[i+NUMBER_OF_ENCLAVE_PAGES] = enclaveMemory;
+    enclavePages[i+number_of_enclave_pages] = enclaveMemory;
   }
   enclaveMemory = (char *) COMMUNICATION_PAGES_BASE + NUMBER_OF_ENCLAVE_PAGES*PAGE_SIZE*enclave_number;
   for(int i = 0; i < NUMBER_OF_COMMUNICATION_PAGES; i++) {
-    enclavePages[i+NUMBER_OF_ENCLAVE_PAGES+NUMBER_OF_STACK_PAGES] = enclaveMemory;
+    enclavePages[i+number_of_enclave_pages+NUMBER_OF_STACK_PAGES] = enclaveMemory;
     enclaveMemory += PAGE_SIZE;
   }
 
@@ -150,11 +160,13 @@ enclave_id_t start_enclave() {
   do {
     receiveMessage(&response);
   } while(response.source != ENCLAVE_MANAGEMENT_ID);
-  for(int i = 0; i < NUMBER_OF_ENCLAVE_PAGES; i++) {
-    for(int j = 0; j < PAGE_SIZE; j++) {
-      enclavePages[i][j] = ((char *) DRAM_BASE)[j+i*PAGE_SIZE];
+  //Copy content to enclave pages.
+  for(int i = 0; i < number_of_enclave_pages; i++) {
+    for(int j = 0; j < PAGE_SIZE / 8; j++) { //Assuming long's are 8 Bytes to make for quicker copying
+      ((long *)(enclavePages[i]))[j] = ((long *) DRAM_BASE)[j+i*(PAGE_SIZE/8)];
     }
   }
+
   enclave_id_t myEnclave = response.content;
   message.type = MSG_SET_ARGUMENT;
   message.content = myEnclave;
@@ -162,7 +174,7 @@ enclave_id_t start_enclave() {
   do {
     receiveMessage(&response);
   } while(response.source != ENCLAVE_MANAGEMENT_ID);
-  for(unsigned int i = 0; i < NUMBER_OF_ENCLAVE_PAGES + NUMBER_OF_STACK_PAGES + NUMBER_OF_COMMUNICATION_PAGES; i++) {
+  for(unsigned int i = 0; i < number_of_enclave_pages + NUMBER_OF_STACK_PAGES + NUMBER_OF_COMMUNICATION_PAGES; i++) {
     message.type = MSG_DONATE_PAGE;
     message.content = (unsigned long) enclavePages[i]; //This is the page for enclave memory
     sendMessage(&message);

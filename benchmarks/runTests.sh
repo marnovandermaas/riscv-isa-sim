@@ -1,5 +1,9 @@
 #!/bin/bash
 set -x
+cd ../managementenclave
+doit clean
+doit
+cd ../benchmarks
 make clean
 make all
 
@@ -17,7 +21,7 @@ python3 tools/interprethistogram.py $OUTPUT_DIR/startenclaves.log $OUTPUT_DIR/st
 spike --ic=$INSTRUCTION_CACHE --dc=$DATA_CACHE --l2=$SHARED_CACHE -p1 -m1024 --l2_partitioning=1 bitcount.out > $OUTPUT_DIR/bitcount_$EXP_NUMBER.log
 spike --ic=$INSTRUCTION_CACHE --dc=$DATA_CACHE --l2=$SHARED_CACHE -p1 --enclave=1 -m1024 --l2_partitioning=1 bandwidth.out > $OUTPUT_DIR/bandwidth_$EXP_NUMBER.log
 spike --ic=$INSTRUCTION_CACHE --dc=$DATA_CACHE --l2=$SHARED_CACHE -p1 --enclave=1 -m1024 --l2_partitioning=1 latency.out > $OUTPUT_DIR/latency_$EXP_NUMBER.log
-spike --ic=$INSTRUCTION_CACHE --dc=$DATA_CACHE --l2=$SHARED_CACHE -p1 --enclave=14 -m1024 --l2_partitioning=1 -g startenclaves.out > $OUTPUT_DIR/startenclaves_$EXP_NUMBER.log
+spike --ic=$INSTRUCTION_CACHE --dc=$DATA_CACHE --l2=$SHARED_CACHE -p1 --enclave=28 -m1024 --l2_partitioning=1 -g startenclaves.out > $OUTPUT_DIR/startenclaves_$EXP_NUMBER.log
 for PARTITIONING_SCHEME in {0..2}
 do
   for SETS_POWER in {6..12}
