@@ -115,10 +115,7 @@ dump:
 	$(RV_PREFIX)objdump -D $(DEFAULTBUILD)
 
 run:
-	./runTests.sh
-
-run_updated:
-	./runTests_update.sh $(SUFFIX)
+	./runTests.sh $(SUFFIX)
 
 test:
 	spike --ic=16:1:8 --dc=16:1:8 --l2=128:1:8 -p1 --enclave=1 -m1024 --l2_partitioning=1 $(DEFAULTBUILD)
