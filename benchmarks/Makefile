@@ -106,9 +106,17 @@ bandwidth: $(OBJS) $(BUILD_DIR)/bandwidth.o
 	$(CC) $(CCFLAGS) -o $@.out $(BUILD_DIR)/$@.o $(OBJS) $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
+createenclave: $(OBJS) $(BUILD_DIR)/createenclave.o
+	$(CC) $(CCFLAGS) -o $@.out $(BUILD_DIR)/$@.o $(OBJS) $(Enclave_Link_Flags)
+	@echo "LINK =>  $@"
+
+nullecall: $(OBJS) $(BUILD_DIR)/nullecall.o
+	$(CC) $(CCFLAGS) -o $@.out $(BUILD_DIR)/$@.o $(OBJS) $(Enclave_Link_Flags)
+	@echo "LINK =>  $@"
+
 #Remove .out and .o files
 clean:
-	rm -r *.out $(BUILD_DIR)/*.o
+	rm -rf *.out $(BUILD_DIR)/*.o
 
 #For debugging purposes and objdump of our output file.
 dump:
