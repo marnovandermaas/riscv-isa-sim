@@ -3,4 +3,4 @@
 	url = git@github.com:zatkh/riscv-tests.git
 [submodule "xv6-riscv"]
 	path = xv6-riscv
-	url = https://github.com/marnovandermaas/xv6-riscv.git:riscv
+	url = https://github.com/marnovandermaas/xv6-riscv:riscv
