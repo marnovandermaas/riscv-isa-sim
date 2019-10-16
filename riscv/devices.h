@@ -60,7 +60,6 @@ class mem_t : public abstract_mem_t {
       throw std::runtime_error("zero bytes of target memory requested");
     }
     data = (char*)calloc(1, size);
-    //fprintf(stderr, "devices.h: initializing mem_t with size 0x%0lx and host address 0x%0lx\n", size, data);
     if (!data) {
       throw std::runtime_error("couldn't allocate " + std::to_string(size) + " bytes of target memory");
     }

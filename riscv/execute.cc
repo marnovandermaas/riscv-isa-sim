@@ -144,13 +144,10 @@ void processor_t::step(size_t n)
           if (unlikely(state.single_step == state.STEP_STEPPING)) {
             state.single_step = state.STEP_STEPPED;
           }
-          //fprintf(stderr, "execute.cc: loading instruction.\n");
           insn_fetch_t fetch = mmu->load_insn(pc, enclave_id);
           if (debug && !state.serialized)
             disasm(fetch.insn);
-          //fprintf(stderr, "execute.cc: starting execute.\n");
           pc = execute_insn(this, pc, fetch);
-          //fprintf(stderr, "execute.cc: advancing pc.\n");
           advance_pc();
           if (unlikely(state.pc >= DEBUG_ROM_ENTRY &&
                        state.pc < DEBUG_END)) {
@@ -252,7 +249,6 @@ void processor_t::step(size_t n)
       }
     }
 
-    //fprintf(stderr, "execute.cc: changing counters.\n");
     state.minstret += instret;
     n -= instret;
   }

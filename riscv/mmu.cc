@@ -60,7 +60,6 @@ tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr)
     if (!sim->mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp))
       throw trap_instruction_access_fault(vaddr);
     tlb_entry_t entry = {(char*)&fetch_temp - vaddr, paddr - vaddr};
-    //fprintf(stderr, "mmu.cc: magicing entry host offset 0x%0lx target offset 0x%0lx\n", entry.host_offset, entry.target_offset);
     return entry;
   }
 }

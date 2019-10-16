@@ -72,7 +72,6 @@ public:
 
   inline void misaligned_store(reg_t addr, reg_t data, size_t size)
   {
-    //fprintf(stderr, "mmu.h: misaligned_store.\n");
 #ifdef RISCV_ENABLE_MISALIGNED
     for (size_t i = 0; i < size; i++)
       store_uint8(addr + i, data >> (i * 8));
@@ -263,7 +262,6 @@ public:
       insn |= (insn_bits_t)*(const uint16_t*)translate_insn_addr_to_host(addr + 4) << 32;
       insn |= (insn_bits_t)*(const uint16_t*)translate_insn_addr_to_host(addr + 2) << 16;
     }
-    //fprintf(stderr, "mmu.h: addr 0x%0lx, len %d\n", addr, length);
     insn_fetch_t fetch = {proc->decode_insn(insn), insn};
     entry->tag = addr;
     entry->next = &icache[icache_index(addr + length)];
@@ -358,20 +356,17 @@ private:
       return tlb_data[vpn % TLB_ENTRIES];
     tlb_entry_t result;
     if (unlikely(tlb_insn_tag[vpn % TLB_ENTRIES] != (vpn | TLB_CHECK_TRIGGERS))) {
-      //fprintf(stderr, "mmu.h: fetch slow path.\n");
       result = fetch_slow_path(addr);
     } else {
       result = tlb_data[vpn % TLB_ENTRIES];
     }
     if (unlikely(tlb_insn_tag[vpn % TLB_ENTRIES] == (vpn | TLB_CHECK_TRIGGERS))) {
-      //fprintf(stderr, "mmu.h: something about triggers.\n");
       uint16_t* ptr = (uint16_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr);
       int match = proc->trigger_match(OPERATION_EXECUTE, addr, *ptr);
       if (match >= 0) {
         throw trigger_matched_t(match, OPERATION_EXECUTE, addr, *ptr);
       }
     }
-    //fprintf(stderr, "mmu.h: returning result with host offset 0x%0lx.\n", result.host_offset);
     return result;
   }
 
