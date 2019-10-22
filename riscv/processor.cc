@@ -457,10 +457,23 @@ void processor_t::set_csr(int which, reg_t val)
       mmu->flush_tlb();
       if (max_xlen == 32)
         state.satp = val & (SATP32_PPN | SATP32_MODE);
+
+      if (max_xlen == 64 && get_field(val, SATP64_MODE) != SATP_MODE_SV39 )
+                            
+        {
+          if(get_field(val, SATP64_MODE) == SATP_MODE_OFF)
+                    printf("in SATP_MODE_OFF mode\n");
+
+          printf("not in sv39 mode\n");
+
+        }                     
+                               
       if (max_xlen == 64 && (get_field(val, SATP64_MODE) == SATP_MODE_OFF ||
                              get_field(val, SATP64_MODE) == SATP_MODE_SV39 ||
                              get_field(val, SATP64_MODE) == SATP_MODE_SV48))
         state.satp = val & (SATP64_PPN | SATP64_MODE);
+        printf("setting satp to %x\n",state.satp);
+
       break;
     }
     case CSR_SEPC: state.sepc = val & ~(reg_t)1; break;
@@ -755,6 +768,7 @@ reg_t processor_t::get_csr(int which)
     case CSR_SATP:
       if (get_field(state.mstatus, MSTATUS_TVM))
         require_privilege(PRV_M);
+        printf("reading satp %x\n",state.satp);
       return state.satp;
     case CSR_SSCRATCH: return state.sscratch;
     case CSR_MSTATUS: return state.mstatus;
