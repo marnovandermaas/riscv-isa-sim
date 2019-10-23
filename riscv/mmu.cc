@@ -60,7 +60,6 @@ tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr)
     if (!sim->mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp))
       throw trap_instruction_access_fault(vaddr);
     tlb_entry_t entry = {(char*)&fetch_temp - vaddr, paddr - vaddr};
-    //fprintf(stderr, "mmu.cc: magicing entry host offset 0x%0lx target offset 0x%0lx\n", entry.host_offset, entry.target_offset);
     return entry;
   }
 }
@@ -205,8 +204,9 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode)
   int va_bits = PGSHIFT + vm.levels * vm.idxbits;
   reg_t mask = (reg_t(1) << (proc->xlen - (va_bits-1))) - 1;
   reg_t masked_msbs = (addr >> (va_bits-1)) & mask;
-  if (masked_msbs != 0 && masked_msbs != mask)
+  if (masked_msbs != 0 && masked_msbs != mask) {
     vm.levels = 0;
+  }
 
   reg_t base = vm.ptbase;
   for (int i = vm.levels - 1; i >= 0; i--) {

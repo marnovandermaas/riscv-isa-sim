@@ -144,7 +144,6 @@ uint64_t cache_sim_t::victimize(uint64_t addr)
 
 void cache_sim_t::access(uint64_t addr, size_t bytes, bool store)
 {
-  //fprintf(stderr, "cache_sim_t accessing cache %s with addres %lu, bytes %lu and store %d.\n", name.c_str(), addr, bytes, store);
   store ? write_accesses++ : read_accesses++;
   (store ? bytes_written : bytes_read) += bytes;
 
@@ -187,7 +186,6 @@ void cache_sim_t::set_miss_handler(cache_sim_t* mh)
 remapping_table_t::remapping_table_t(size_t _sets, size_t _ways, size_t _linesz, const char* _name, partitioned_cache_sim_t* _l2, enclave_id_t _id) :
   cache_sim_t(_sets, _ways, _linesz, _name), llc(_l2), enclave_id(_id)
 {
-  //fprintf(stderr, "remapping_table_t: constructing RMT %lu.\n", _id);
   llc_read_misses = 0;
   llc_write_misses = 0;
   slots = new size_t[sets*ways]();
@@ -195,7 +193,6 @@ remapping_table_t::remapping_table_t(size_t _sets, size_t _ways, size_t _linesz,
 
 void remapping_table_t::access(uint64_t addr, size_t bytes, bool store)
 {
-    //fprintf(stderr, "remapping_table_t: Accessing remapping table with address %lu, bytes %lu and store %d.\n", addr, bytes, store);
     store ? write_accesses++ : read_accesses++;
     (store ? bytes_written : bytes_read) += bytes;
     size_t index;
@@ -250,7 +247,6 @@ uint64_t* remapping_table_t::check_tag(uint64_t addr, size_t *index)
     size_t idx = (addr >> idx_shift) & (sets-1);
     size_t tag = (addr >> idx_shift) | VALID;
 
-    //fprintf(stderr, "remapping_table_t: checking tag\n");
     for (size_t i = 0; i < ways; i++) {
       if (tag == (tags[idx*ways + i] & ~DIRTY)) {
         *index = idx*ways + i;
@@ -263,7 +259,6 @@ uint64_t* remapping_table_t::check_tag(uint64_t addr, size_t *index)
 
 uint64_t remapping_table_t::victimize(uint64_t addr)
 {
-    //fprintf(stderr, "remapping_table_t: victimize\n");
     size_t idx = (addr >> idx_shift) & (sets-1);
     size_t way = lfsr.next() % ways;
     return victimize(addr, idx*ways + way);
@@ -328,15 +323,10 @@ bool partitioned_cache_sim_t::access(size_t slot, uint64_t addr, enclave_id_t id
 
 size_t partitioned_cache_sim_t::victimize(uint64_t addr, size_t slot, enclave_id_t id) //Returns new random slot to replace.
 {
-  //fprintf(stderr, "partitioned_cache_sim_t: victimizing address %lu, slot %lu, for id %lu. identifiers %d, addresses %d, cache_size %lu\n", addr, slot, id, identifiers, addresses, cache_size);
   identifiers[slot] = ENCLAVE_INVALID_ID;
-  //fprintf(stderr, "1\n");
   size_t random_slot = rand() % cache_size;
-  //fprintf(stderr, "partitioned_cache_sim_t, generated random slot: %lu\n", random_slot);
   addresses[random_slot] = addr;
-  //fprintf(stderr, "1\n");
   identifiers[random_slot] = id;
-  //fprintf(stderr, "partitioned_cache_sim_t: ending victimize.\n");
   return random_slot;
 }
 
