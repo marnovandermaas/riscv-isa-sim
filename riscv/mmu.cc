@@ -226,6 +226,15 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode)
     } else if ((pte & PTE_U) ? s_mode && (type == FETCH || !sum) : !s_mode) {
       break;
     } else if (!(pte & PTE_V) || (!(pte & PTE_R) && (pte & PTE_W))) {
+      fprintf(stderr, "mmu.cc: TRAP not valid or (write and not read)\n");
+      fprintf(stderr, "walk(addr 0x%016lx, type %u, mode %lu)\n", addr, type, mode);
+      fprintf(stderr, "mmu.cc: level %d, pte 0x%016lx ppn 0x%016lx, idx 0x%016lx\n", i, pte, ppn, idx);
+      fprintf(stderr, "ptbase 0x%016lx content: \n", vm.ptbase);
+      for(int i = 0; i < 1024; i++) {
+        fprintf(stderr, "%016lx ", ((uint64_t*) (sim->addr_to_mem(vm.ptbase)))[i]);
+      }
+      fprintf(stderr, "\n");
+      exit(-1); //TODO remove
       break;
     } else if (type == FETCH ? !(pte & PTE_X) :
                type == LOAD ?  !(pte & PTE_R) && !(mxr && (pte & PTE_X)) :
