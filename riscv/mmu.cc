@@ -204,8 +204,9 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode)
   int va_bits = PGSHIFT + vm.levels * vm.idxbits;
   reg_t mask = (reg_t(1) << (proc->xlen - (va_bits-1))) - 1;
   reg_t masked_msbs = (addr >> (va_bits-1)) & mask;
-  if (masked_msbs != 0 && masked_msbs != mask)
+  if (masked_msbs != 0 && masked_msbs != mask) {
     vm.levels = 0;
+  }
 
   reg_t base = vm.ptbase;
   for (int i = vm.levels - 1; i >= 0; i--) {

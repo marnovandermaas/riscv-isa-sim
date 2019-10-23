@@ -121,9 +121,6 @@ void processor_t::step(size_t n)
        instret++; \
      }
 
-       //if(pc == DRAM_BASE && enclave_id != 0) { 
-       //   pc = DRAM_BASE + enclave_id*NUM_OF_ENCLAVE_PAGES*PGSIZE; 
-       //} \ //Removed this from else statement in advance_pc because it is super ugly
     try
     {
       take_pending_interrupt();
