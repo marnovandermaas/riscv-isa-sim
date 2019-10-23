@@ -49,13 +49,13 @@ reg_t mmu_t::translate(reg_t addr, access_type type)
   return walk(addr, type, mode) | (addr & (PGSIZE-1));
 }
 
-tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr)
+tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr, enclave_id_t id)
 {
   reg_t paddr = translate(vaddr, FETCH);
   auto host_addr = sim->addr_to_mem(paddr);
   //fprintf(stderr, "mmu.cc: fetch slow path: vaddr 0x%0lx, paddr 0x%0lx, haddr 0x%0lx\n", vaddr, paddr, host_addr);
   if (host_addr) {
-    return refill_tlb(vaddr, paddr, host_addr, FETCH);
+    return refill_tlb(vaddr, paddr, host_addr, FETCH, id);
   } else {
     if (!sim->mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp))
       throw trap_instruction_access_fault(vaddr);
@@ -111,7 +111,7 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t i
       if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD))
         tracer.trace(paddr, len, LOAD); //TODO should tracer trace any unauthorized loads?
       else
-        refill_tlb(addr, paddr, host_addr, LOAD);
+        refill_tlb(addr, paddr, host_addr, LOAD, id);
     } else {
 //#ifdef PRAESIDIO_DEBUG
       fprintf(stderr, "mmu.cc: Error! Denying load access to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", id, addr, paddr, num_of_pages, PGSIZE);
@@ -149,7 +149,7 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
       if (tracer.interested_in_range(paddr, paddr + PGSIZE, STORE))
         tracer.trace(paddr, len, STORE); //TODO should tracer know about an unauthorized store?
       else
-        refill_tlb(addr, paddr, host_addr, STORE);
+        refill_tlb(addr, paddr, host_addr, STORE, id);
     } else {
 //#ifdef PRAESIDIO_DEBUG
       fprintf(stderr, "mmu.cc: Error! Denying store access to enclave 0x%0lx, virtual address 0x%0lx, physical address 0x%0lx, number of pages %lu, page size 0x%0lx\n", id, addr, paddr, num_of_pages, PGSIZE);
@@ -164,7 +164,7 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
   }
 }
 
-tlb_entry_t mmu_t::refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_type type)
+tlb_entry_t mmu_t::refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_type type, enclave_id_t id)
 {
   reg_t idx = (vaddr >> PGSHIFT) % TLB_ENTRIES;
   reg_t expected_tag = vaddr >> PGSHIFT;
@@ -185,7 +185,7 @@ tlb_entry_t mmu_t::refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_
   else if (type == STORE) tlb_store_tag[idx] = expected_tag;
   else tlb_load_tag[idx] = expected_tag;
 
-  tlb_entry_t entry = {host_addr - vaddr, paddr - vaddr};
+  tlb_entry_t entry = {host_addr - vaddr, paddr - vaddr, id};
   tlb_data[idx] = entry;
   return entry;
 }

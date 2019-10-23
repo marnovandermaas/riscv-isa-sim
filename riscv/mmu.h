@@ -33,6 +33,7 @@ struct icache_entry_t {
 struct tlb_entry_t {
   char* host_offset;
   reg_t target_offset;
+  enclave_id_t enclave_id;
 };
 
 class trigger_matched_t
@@ -80,29 +81,39 @@ public:
 #endif
   }
 
-  /* // template for functions that load an aligned value from memory
-  // #define load_func(type) \
-  //   inline type##_t load_##type(reg_t addr) { \
-  //     if (unlikely(addr & (sizeof(type##_t)-1))) \
-  //       return misaligned_load(addr, sizeof(type##_t)); \
-  //     reg_t vpn = addr >> PGSHIFT; \
-  //     if (likely(tlb_load_tag[vpn % TLB_ENTRIES] == vpn)) \
-  //       return *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
-  //     if (unlikely(tlb_load_tag[vpn % TLB_ENTRIES] == (vpn | TLB_CHECK_TRIGGERS))) { \
-  //       type##_t data = *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
-  //       if (!matched_trigger) { \
-  //         matched_trigger = trigger_exception(OPERATION_LOAD, addr, data); \
-  //         if (matched_trigger) \
-  //           throw *matched_trigger; \
-  //       } \
-  //       return data; \
-  //     } \
-  //     type##_t res; \
-  //     load_slow_path(addr, sizeof(type##_t), (uint8_t*)&res); \
-  //     return res; \
-  //   } */
   // template for functions that load an aligned value from memory
   #define load_func(type) \
+    inline type##_t load_##type(reg_t addr) { \
+      if (unlikely(addr & (sizeof(type##_t)-1))) \
+        return misaligned_load(addr, sizeof(type##_t)); \
+      reg_t vpn = addr >> PGSHIFT; \
+      enclave_id_t id = ENCLAVE_DEFAULT_ID; \
+      if(proc != NULL) { \
+        id = proc->get_enclave_id(); \
+      } \
+      if (likely(tlb_load_tag[vpn % TLB_ENTRIES] == vpn)) { \
+        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == id) { \
+          return *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
+        } \
+      } \
+      if (unlikely(tlb_load_tag[vpn % TLB_ENTRIES] == (vpn | TLB_CHECK_TRIGGERS))) { \
+        type##_t data = *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
+        if (!matched_trigger) { \
+          matched_trigger = trigger_exception(OPERATION_LOAD, addr, data); \
+          if (matched_trigger) \
+            throw *matched_trigger; \
+        } \
+        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == id) { \
+          return data; \
+        } \
+      } \
+      type##_t res; \
+      load_slow_path(addr, sizeof(type##_t), (uint8_t*)&res, id); \
+      return res; \
+    }
+
+  // template for functions that load an aligned value from memory
+  /*#define load_func(type) \
     inline type##_t load_##type(reg_t addr) { \
       if (unlikely(addr & (sizeof(type##_t)-1))) \
         return misaligned_load(addr, sizeof(type##_t)); \
@@ -113,7 +124,7 @@ public:
       } \
       load_slow_path(addr, sizeof(type##_t), (uint8_t*)&res, id); \
       return res; \
-    }
+    }*/
 
   // load value from memory at aligned address; zero extend to register width
   load_func(uint8)
@@ -127,28 +138,37 @@ public:
   load_func(int32)
   load_func(int64)
 
-  /* // template for functions that store an aligned value to memory
-  // #define store_func(type) \
-  //   void store_##type(reg_t addr, type##_t val) { \
-  //     if (unlikely(addr & (sizeof(type##_t)-1))) \
-  //       return misaligned_store(addr, val, sizeof(type##_t)); \
-  //     reg_t vpn = addr >> PGSHIFT; \
-  //     if (likely(tlb_store_tag[vpn % TLB_ENTRIES] == vpn)) \
-  //       *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = val; \
-  //     else if (unlikely(tlb_store_tag[vpn % TLB_ENTRIES] == (vpn | TLB_CHECK_TRIGGERS))) { \
-  //       if (!matched_trigger) { \
-  //         matched_trigger = trigger_exception(OPERATION_STORE, addr, val); \
-  //         if (matched_trigger) \
-  //           throw *matched_trigger; \
-  //       } \
-  //       *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = val; \
-  //     } \
-  //     else \
-  //       store_slow_path(addr, sizeof(type##_t), (const uint8_t*)&val); \
-  //   } */
-
   // template for functions that store an aligned value to memory
   #define store_func(type) \
+    void store_##type(reg_t addr, type##_t val) { \
+      if (unlikely(addr & (sizeof(type##_t)-1))) \
+        return misaligned_store(addr, val, sizeof(type##_t)); \
+      reg_t vpn = addr >> PGSHIFT; \
+      enclave_id_t id = ENCLAVE_DEFAULT_ID; \
+      if(proc != NULL) { \
+        id = proc->get_enclave_id(); \
+      } \
+      if (likely(tlb_store_tag[vpn % TLB_ENTRIES] == vpn)) {\
+        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == id) {\
+          *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = val; \
+          return; \
+        } \
+      } else if (unlikely(tlb_store_tag[vpn % TLB_ENTRIES] == (vpn | TLB_CHECK_TRIGGERS))) { \
+        if (!matched_trigger) { \
+          matched_trigger = trigger_exception(OPERATION_STORE, addr, val); \
+          if (matched_trigger) \
+            throw *matched_trigger; \
+        } \
+        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == id) { \
+          *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = val; \
+          return; \
+        } \
+      } \
+      store_slow_path(addr, sizeof(type##_t), (const uint8_t*)&val, id); \
+    }
+
+  // template for functions that store an aligned value to memory
+  /*#define store_func(type) \
     void store_##type(reg_t addr, type##_t val) { \
       if (unlikely(addr & (sizeof(type##_t)-1))) \
         return misaligned_store(addr, val, sizeof(type##_t)); \
@@ -157,10 +177,9 @@ public:
         id = proc->get_enclave_id(); \
       } \
       store_slow_path(addr, sizeof(type##_t), (const uint8_t*)&val, id); \
-    }
+    }*/
 
   // template for functions that perform an atomic memory operation
-  //TODO adjust for enclave identifiers
   #define amo_func(type) \
     template<typename op> \
     type##_t amo_##type(reg_t addr, op f) { \
@@ -217,7 +236,7 @@ public:
   {
     reg_t paddr = translate(vaddr, LOAD);
     if (auto host_addr = sim->addr_to_mem(paddr))
-      load_reservation_address = refill_tlb(vaddr, paddr, host_addr, LOAD).target_offset + vaddr;
+      load_reservation_address = refill_tlb(vaddr, paddr, host_addr, LOAD, proc->get_enclave_id()).target_offset + vaddr;
     else
       throw trap_load_access_fault(vaddr); // disallow LR to I/O space
   }
@@ -226,7 +245,7 @@ public:
   {
     reg_t paddr = translate(vaddr, STORE);
     if (auto host_addr = sim->addr_to_mem(paddr))
-      return load_reservation_address == refill_tlb(vaddr, paddr, host_addr, STORE).target_offset + vaddr;
+      return load_reservation_address == refill_tlb(vaddr, paddr, host_addr, STORE, proc->get_enclave_id()).target_offset + vaddr;
     else
       throw trap_store_access_fault(vaddr); // disallow SC to I/O space
   }
@@ -336,14 +355,14 @@ private:
   reg_t tlb_store_tag[TLB_ENTRIES];
 
   // finish translation on a TLB miss and update the TLB
-  tlb_entry_t refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_type type);
+  tlb_entry_t refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_type type, enclave_id_t id);
   const char* fill_from_mmio(reg_t vaddr, reg_t paddr);
 
   // perform a page table walk for a given VA; set referenced/dirty bits
   reg_t walk(reg_t addr, access_type type, reg_t prv);
 
   // handle uncommon cases: TLB misses, page faults, MMIO
-  tlb_entry_t fetch_slow_path(reg_t addr);
+  tlb_entry_t fetch_slow_path(reg_t addr, enclave_id_t id);
   void load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t id);
   void store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave_id_t id);
   reg_t translate(reg_t addr, access_type type);
@@ -354,8 +373,12 @@ private:
     if (likely(tlb_insn_tag[vpn % TLB_ENTRIES] == vpn))
       return tlb_data[vpn % TLB_ENTRIES];
     tlb_entry_t result;
+    enclave_id_t id = ENCLAVE_DEFAULT_ID; \
+    if(proc != NULL) { \
+      id = proc->get_enclave_id(); \
+    } \
     if (unlikely(tlb_insn_tag[vpn % TLB_ENTRIES] != (vpn | TLB_CHECK_TRIGGERS))) {
-      result = fetch_slow_path(addr);
+      result = fetch_slow_path(addr, id);
     } else {
       result = tlb_data[vpn % TLB_ENTRIES];
     }
