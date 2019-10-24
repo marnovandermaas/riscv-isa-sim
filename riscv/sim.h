@@ -13,6 +13,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include "debug.h"
 
 #define STACK_PAGE_OFFSET 4096
 
@@ -65,7 +66,7 @@ private:
   processor_t* get_core(const std::string& i);
   void step(size_t n); // step through simulation
 #ifdef PRAESIDIO_DEBUG
-  static const size_t INTERLEAVE = 1;
+  static const size_t INTERLEAVE = 10;
 #else
   static const size_t INTERLEAVE = 5000;
 #endif
