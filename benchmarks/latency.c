@@ -12,19 +12,13 @@ void normal_world() {
   char read_buffer[OUTPUT_LEN];
   int offset = 0;
 
-  char *enclaveMemory = (char *) DRAM_BASE + NUMBER_OF_ENCLAVE_PAGES*PAGE_SIZE;
-  char *enclavePages[NUMBER_OF_ENCLAVE_PAGES];
-  for(int i = 0; i < NUMBER_OF_ENCLAVE_PAGES; i++) {
-    enclavePages[i] = enclaveMemory;
-    enclaveMemory += PAGE_SIZE;
-  }
   enclave_id_t myEnclave = start_enclave();
   if(myEnclave == ENCLAVE_INVALID_ID) return;
 
-  for(int i = 0; i < REPEAT; i++) {
-    give_read_permission(((int) input - DRAM_BASE) >> 12, myEnclave);
-    address = get_receive_mailbox_base_address(myEnclave);
+  give_read_permission(((int) input - DRAM_BASE) >> 12, myEnclave);
+  address = get_receive_mailbox_base_address(myEnclave);
 
+  for(int i = 0; i < REPEAT; i++) {
     input += send_enclave_message(input, name, INPUT_LEN);
     offset += get_enclave_message(address+offset, read_buffer);
   }
@@ -40,10 +34,10 @@ void enclave_world() {
   char read_buffer[INPUT_LEN];
   int offset = 0;
 
-  for(int i = 0; i < REPEAT; i++) {
-    give_read_permission(((int) output - DRAM_BASE) >> 12, ENCLAVE_DEFAULT_ID);
-    address = get_receive_mailbox_base_address(ENCLAVE_DEFAULT_ID);
+  give_read_permission(((int) output - DRAM_BASE) >> 12, ENCLAVE_DEFAULT_ID);
+  address = get_receive_mailbox_base_address(ENCLAVE_DEFAULT_ID);
 
+  for(int i = 0; i < REPEAT; i++) {
     offset += get_enclave_message(address+offset, read_buffer);
     output += send_enclave_message(output, read_buffer, OUTPUT_LEN);
   }
