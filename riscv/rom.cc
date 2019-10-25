@@ -7,7 +7,6 @@ rom_device_t::rom_device_t(std::vector<char> vec_data)
   if (!data) {
     throw std::runtime_error("rom.cc: couldn't allocate " + std::to_string(len) + " bytes of target memory");
   }
-  //fprintf(stderr, "rom.cc: creating rom at host address 0x%0lx\n", data);
   for(size_t i = 0; i < len; i++) {
     data[i] = vec_data[i];
   }

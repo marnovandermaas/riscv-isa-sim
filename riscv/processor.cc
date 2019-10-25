@@ -25,7 +25,6 @@ processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
   : debug(false), halt_request(false), sim(sim), ext(NULL), id(id), page_owners(page_owners), num_of_pages(num_of_pages),
   halt_on_reset(halt_on_reset), last_pc(1), executions(1)
 {
-  //fprintf(stderr, "processor.cc: constructing procesor with id %u and enclave idnetifier %lu.\n", id, e_id);
   enclave_id = e_id;
   mailbox = message;
   allMailboxes = allMessages;
@@ -319,7 +318,6 @@ void processor_t::take_trap(trap_t& t, reg_t epc)
 void processor_t::disasm(insn_t insn)
 {
   uint64_t bits = insn.bits() & ((1ULL << (8 * insn_length(insn.bits()))) - 1);
-  //fprintf(stderr, "Dissassembling instruction: %s .\n", disassembler->disassemble(insn).c_str());
   if (last_pc != state.pc || last_bits != bits) {
     if (executions != 1) {
       fprintf(stderr, "core %3d: Executed %" PRIx64 " times\n", id, executions);
@@ -343,12 +341,10 @@ int processor_t::paddr_bits()
 
 void processor_t::set_csr(int which, reg_t val)
 {
-  //fprintf(stderr, "Processor_t: Setting CSR 0x%x, to value %lu.\n", which, val);
   val = zext_xlen(val);
   reg_t delegable_ints = MIP_SSIP | MIP_STIP | MIP_SEIP
                        | ((ext != NULL) << IRQ_COP);
   reg_t all_ints = delegable_ints | MIP_MSIP | MIP_MTIP;
-  //fprintf(stderr, "Processor_t: Setting CSR 0x%x, to value %lu.\n", which, val);
   switch (which)
   {
     case CSR_FFLAGS:
@@ -459,15 +455,15 @@ void processor_t::set_csr(int which, reg_t val)
         state.satp = val & (SATP32_PPN | SATP32_MODE);
 
       if (max_xlen == 64 && get_field(val, SATP64_MODE) != SATP_MODE_SV39 )
-                            
+
         {
           if(get_field(val, SATP64_MODE) == SATP_MODE_OFF)
                     printf("in SATP_MODE_OFF mode\n");
 
           printf("not in sv39 mode\n");
 
-        }                     
-                               
+        }
+
       if (max_xlen == 64 && (get_field(val, SATP64_MODE) == SATP_MODE_OFF ||
                              get_field(val, SATP64_MODE) == SATP_MODE_SV39 ||
                              get_field(val, SATP64_MODE) == SATP_MODE_SV48))
@@ -703,7 +699,6 @@ reg_t processor_t::get_csr(int which)
         message->source = ENCLAVE_INVALID_ID;
         return message->content;
       }
-      //else if (message->destination != ENCLAVE_INVALID_ID) { fprintf(stderr, "processor.cc: Warning! enclave 0x%0lx message found but with wrong destintation identifier 0x%0lx\n", enclave_id, message->destination); }
     }
     state.arg_enclave_id = ENCLAVE_INVALID_ID;
     return 0;

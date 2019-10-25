@@ -58,7 +58,7 @@ tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr, enclave_id_t enclave_id)
       return refill_tlb(vaddr, paddr, host_addr, FETCH);
     } else {
 #ifdef PRAESIDIO_DEBUG
-      fprintf(stderr, "mmu.cc: Error! Denying fetch to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", enclave_id, vaddr, host_addr, num_of_pages, PGSIZE);
+      fprintf(stderr, "mmu.cc: Warning! Denying fetch to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", enclave_id, vaddr, host_addr, num_of_pages, PGSIZE);
 #endif
       throw trap_instruction_access_fault(vaddr);
     }
@@ -120,7 +120,7 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t e
         refill_tlb(addr, paddr, host_addr, LOAD);
     } else {
 #ifdef PRAESIDIO_DEBUG
-      fprintf(stderr, "mmu.cc: Error! Denying load access to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", id, addr, paddr, num_of_pages, PGSIZE);
+      fprintf(stderr, "mmu.cc: Warning! Denying load access to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", id, addr, paddr, num_of_pages, PGSIZE);
 #endif
       throw trap_load_access_fault(addr);
     }
@@ -155,14 +155,11 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
         refill_tlb(addr, paddr, host_addr, STORE);
     } else {
 #ifdef PRAESIDIO_DEBUG
-      fprintf(stderr, "mmu.cc: Error! Denying store access to enclave 0x%0lx, virtual address 0x%0lx, physical address 0x%0lx, number of pages %lu, page size 0x%0lx\n", id, addr, paddr, num_of_pages, PGSIZE);
+      fprintf(stderr, "mmu.cc: Warning! Denying store access to enclave 0x%0lx, virtual address 0x%0lx, physical address 0x%0lx, number of pages %lu, page size 0x%0lx\n", id, addr, paddr, num_of_pages, PGSIZE);
 #endif
       throw trap_store_access_fault(addr);
     }
   } else if (!sim->mmio_store(paddr, len, bytes)) {
-#ifdef PRAESIDIO_DEBUG
-    fprintf(stderr, "mmu.cc: Throwing store access fault in store_slow_path.\n");
-#endif
     throw trap_store_access_fault(addr);
   }
 }
@@ -204,7 +201,6 @@ tlb_entry_t mmu_t::refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_
 reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode)
 {
   vm_info vm = decode_vm_info(proc->max_xlen, mode, proc->get_state()->satp);
-  //fprintf(stderr,"vm.level is%d\n",vm.levels);
   if (vm.levels == 0)
     return addr & ((reg_t(2) << (proc->xlen-1))-1); // zero-extend from xlen
 
@@ -238,6 +234,7 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode)
     } else if ((pte & PTE_U) ? s_mode && (type == FETCH || !sum) : !s_mode) {
       break;
     } else if (!(pte & PTE_V) || (!(pte & PTE_R) && (pte & PTE_W))) {
+#ifdef PRAESIDIO_DEBUG
       fprintf(stderr, "mmu.cc: TRAP not valid or (write and not read)\n");
       fprintf(stderr, "walk(addr 0x%016lx, type %u, mode %lu)\n", addr, type, mode);
       fprintf(stderr, "mmu.cc: level %d, pte 0x%016lx ppn 0x%016lx, idx 0x%016lx\n", i, pte, ppn, idx);
@@ -247,6 +244,7 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode)
       }
       fprintf(stderr, "\n");
       exit(-1); //TODO remove
+#endif
       break;
     } else if (type == FETCH ? !(pte & PTE_X) :
                type == LOAD ?  !(pte & PTE_R) && !(mxr && (pte & PTE_X)) :
