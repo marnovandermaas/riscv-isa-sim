@@ -33,7 +33,8 @@ struct icache_entry_t {
 struct tlb_entry_t {
   char* host_offset;
   reg_t target_offset;
-  enclave_id_t enclave_id;
+  enclave_id_t owner_id;
+  enclave_id_t reader_id;
 };
 
 class trigger_matched_t
@@ -88,7 +89,11 @@ public:
         return misaligned_load(addr, sizeof(type##_t), enclave_id); \
       reg_t vpn = addr >> PGSHIFT; \
       if (likely(tlb_load_tag[vpn % TLB_ENTRIES] == vpn)) { \
-        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == enclave_id) { \
+        if(likely( \
+          tlb_data[vpn % TLB_ENTRIES].owner_id  == enclave_id || \
+          tlb_data[vpn % TLB_ENTRIES].reader_id == enclave_id || \
+          tlb_data[vpn % TLB_ENTRIES].owner_id  == ENCLAVE_INVALID_ID \
+        )) { \
           return *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
         } \
       } \
@@ -99,7 +104,11 @@ public:
           if (matched_trigger) \
             throw *matched_trigger; \
         } \
-        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == enclave_id) { \
+        if(likely( \
+          tlb_data[vpn % TLB_ENTRIES].owner_id  == enclave_id || \
+          tlb_data[vpn % TLB_ENTRIES].reader_id == enclave_id || \
+          tlb_data[vpn % TLB_ENTRIES].owner_id  == ENCLAVE_INVALID_ID) \
+        ) { \
           return data; \
         } \
       } \
@@ -127,7 +136,11 @@ public:
         return misaligned_store(addr, val, sizeof(type##_t), enclave_id); \
       reg_t vpn = addr >> PGSHIFT; \
       if (likely(tlb_store_tag[vpn % TLB_ENTRIES] == vpn)) {\
-        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == enclave_id) {\
+        if(likely( \
+          tlb_data[vpn % TLB_ENTRIES].owner_id  == enclave_id || \
+          tlb_data[vpn % TLB_ENTRIES].reader_id == enclave_id || \
+          tlb_data[vpn % TLB_ENTRIES].owner_id  == ENCLAVE_INVALID_ID \
+        )) {\
           *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = val; \
           return; \
         } \
@@ -137,7 +150,11 @@ public:
           if (matched_trigger) \
             throw *matched_trigger; \
         } \
-        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == enclave_id) { \
+        if(likely( \
+          tlb_data[vpn % TLB_ENTRIES].owner_id  == enclave_id || \
+          tlb_data[vpn % TLB_ENTRIES].reader_id == enclave_id || \
+          tlb_data[vpn % TLB_ENTRIES].owner_id  == ENCLAVE_INVALID_ID \
+        )) { \
           *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = val; \
           return; \
         } \
@@ -202,7 +219,7 @@ public:
   {
     reg_t paddr = translate(vaddr, LOAD);
     if (auto host_addr = sim->addr_to_mem(paddr))
-      load_reservation_address = refill_tlb(vaddr, paddr, host_addr, LOAD, proc->get_enclave_id()).target_offset + vaddr;
+      load_reservation_address = refill_tlb(vaddr, paddr, host_addr, LOAD).target_offset + vaddr;
     else
       throw trap_load_access_fault(vaddr); // disallow LR to I/O space
   }
@@ -211,7 +228,7 @@ public:
   {
     reg_t paddr = translate(vaddr, STORE);
     if (auto host_addr = sim->addr_to_mem(paddr))
-      return load_reservation_address == refill_tlb(vaddr, paddr, host_addr, STORE, proc->get_enclave_id()).target_offset + vaddr;
+      return load_reservation_address == refill_tlb(vaddr, paddr, host_addr, STORE).target_offset + vaddr;
     else
       throw trap_store_access_fault(vaddr); // disallow SC to I/O space
   }
@@ -223,28 +240,28 @@ public:
     return (addr / PC_ALIGN) % ICACHE_ENTRIES;
   }
 
-  inline icache_entry_t* refill_icache(reg_t addr, icache_entry_t* entry, enclave_id_t id)
+  inline icache_entry_t* refill_icache(reg_t addr, icache_entry_t* entry, enclave_id_t enclave_id)
   {
-    auto tlb_entry = translate_insn_addr(addr);
+    auto tlb_entry = translate_insn_addr(addr, enclave_id);
     reg_t paddr = tlb_entry.target_offset + addr;
-    if(!check_identifier(paddr, id, false)) {
+    if(!check_identifier(paddr, enclave_id, false)) {
       return NULL;
     }
     insn_bits_t insn = *(uint16_t*)(tlb_entry.host_offset + addr);
     int length = insn_length(insn);
 
     if (likely(length == 4)) {
-      insn |= (insn_bits_t)*(const int16_t*)translate_insn_addr_to_host(addr + 2) << 16;
+      insn |= (insn_bits_t)*(const int16_t*)translate_insn_addr_to_host(addr + 2, enclave_id) << 16;
     } else if (length == 2) {
       insn = (int16_t)insn;
     } else if (length == 6) {
-      insn |= (insn_bits_t)*(const int16_t*)translate_insn_addr_to_host(addr + 4) << 32;
-      insn |= (insn_bits_t)*(const uint16_t*)translate_insn_addr_to_host(addr + 2) << 16;
+      insn |= (insn_bits_t)*(const int16_t*)translate_insn_addr_to_host(addr + 4, enclave_id) << 32;
+      insn |= (insn_bits_t)*(const uint16_t*)translate_insn_addr_to_host(addr + 2, enclave_id) << 16;
     } else {
       static_assert(sizeof(insn_bits_t) == 8, "insn_bits_t must be uint64_t");
-      insn |= (insn_bits_t)*(const int16_t*)translate_insn_addr_to_host(addr + 6) << 48;
-      insn |= (insn_bits_t)*(const uint16_t*)translate_insn_addr_to_host(addr + 4) << 32;
-      insn |= (insn_bits_t)*(const uint16_t*)translate_insn_addr_to_host(addr + 2) << 16;
+      insn |= (insn_bits_t)*(const int16_t*)translate_insn_addr_to_host(addr + 6, enclave_id) << 48;
+      insn |= (insn_bits_t)*(const uint16_t*)translate_insn_addr_to_host(addr + 4, enclave_id) << 32;
+      insn |= (insn_bits_t)*(const uint16_t*)translate_insn_addr_to_host(addr + 2, enclave_id) << 16;
     }
     insn_fetch_t fetch = {proc->decode_insn(insn), insn};
     entry->tag = addr;
@@ -258,18 +275,18 @@ public:
     return entry;
   }
 
-  inline icache_entry_t* access_icache(reg_t addr, enclave_id_t id)
+  inline icache_entry_t* access_icache(reg_t addr, enclave_id_t enclave_id)
   {
     icache_entry_t* entry = &icache[icache_index(addr)];
     if (likely(entry->tag == addr))
       return entry;
-    return refill_icache(addr, entry, id);
+    return refill_icache(addr, entry, enclave_id);
   }
 
-  inline insn_fetch_t load_insn(reg_t addr, enclave_id_t id)
+  inline insn_fetch_t load_insn(reg_t addr, enclave_id_t enclave_id)
   {
     icache_entry_t entry;
-    if(refill_icache(addr, &entry, id)) {
+    if(refill_icache(addr, &entry, enclave_id)) {
       return entry.data;
     }
     throw trap_illegal_instruction(0);
@@ -321,7 +338,7 @@ private:
   reg_t tlb_store_tag[TLB_ENTRIES];
 
   // finish translation on a TLB miss and update the TLB
-  tlb_entry_t refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_type type, enclave_id_t id);
+  tlb_entry_t refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_type type);
   const char* fill_from_mmio(reg_t vaddr, reg_t paddr);
 
   // perform a page table walk for a given VA; set referenced/dirty bits
@@ -334,17 +351,13 @@ private:
   reg_t translate(reg_t addr, access_type type);
 
   // ITLB lookup
-  inline tlb_entry_t translate_insn_addr(reg_t addr) {
+  inline tlb_entry_t translate_insn_addr(reg_t addr, enclave_id_t enclave_id) {
     reg_t vpn = addr >> PGSHIFT;
     if (likely(tlb_insn_tag[vpn % TLB_ENTRIES] == vpn))
       return tlb_data[vpn % TLB_ENTRIES];
     tlb_entry_t result;
-    enclave_id_t id = ENCLAVE_DEFAULT_ID; \
-    if(proc != NULL) { \
-      id = proc->get_enclave_id(); \
-    } \
     if (unlikely(tlb_insn_tag[vpn % TLB_ENTRIES] != (vpn | TLB_CHECK_TRIGGERS))) {
-      result = fetch_slow_path(addr, id);
+      result = fetch_slow_path(addr, enclave_id);
     } else {
       result = tlb_data[vpn % TLB_ENTRIES];
     }
@@ -358,9 +371,8 @@ private:
     return result;
   }
 
-  inline const uint16_t* translate_insn_addr_to_host(reg_t addr) {
-    uint16_t* host_address = (uint16_t*)(translate_insn_addr(addr).host_offset + addr);
-    //fprintf(stderr, "mmu.h: addr 0x%0lx is translated to host address 0x%0lx\n", addr, host_address);
+  inline const uint16_t* translate_insn_addr_to_host(reg_t addr, enclave_id_t enclave_id) {
+    uint16_t* host_address = (uint16_t*)(translate_insn_addr(addr, enclave_id).host_offset + addr);
     return host_address;
   }
 

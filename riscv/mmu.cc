@@ -55,7 +55,7 @@ tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr, enclave_id_t enclave_id)
   auto host_addr = sim->addr_to_mem(paddr);
   if (host_addr) {
     if(check_identifier(paddr, enclave_id, true)) {
-      return refill_tlb(vaddr, paddr, host_addr, FETCH, enclave_id);
+      return refill_tlb(vaddr, paddr, host_addr, FETCH);
     } else {
 #ifdef PRAESIDIO_DEBUG
       fprintf(stderr, "mmu.cc: Error! Denying fetch to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", enclave_id, vaddr, host_addr, num_of_pages, PGSIZE);
@@ -108,16 +108,16 @@ bool mmu_t::check_identifier(reg_t paddr, enclave_id_t id, bool load) {
   return true;
 }
 
-void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t id)
+void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t enclave_id)
 {
   reg_t paddr = translate(addr, LOAD);
   if (auto host_addr = sim->addr_to_mem(paddr)) {
-    if(check_identifier(paddr, id, true)) {
+    if(check_identifier(paddr, enclave_id, true)) {
       memcpy(bytes, host_addr, len);
       if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD))
         tracer.trace(paddr, len, LOAD); //TODO should tracer trace any unauthorized loads?
       else
-        refill_tlb(addr, paddr, host_addr, LOAD, id);
+        refill_tlb(addr, paddr, host_addr, LOAD);
     } else {
 #ifdef PRAESIDIO_DEBUG
       fprintf(stderr, "mmu.cc: Error! Denying load access to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", id, addr, paddr, num_of_pages, PGSIZE);
@@ -136,7 +136,7 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t i
   }
 }
 
-void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave_id_t id)
+void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave_id_t enclave_id)
 {
   reg_t paddr = translate(addr, STORE);
   if (!matched_trigger) {
@@ -147,12 +147,12 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
   }
 
   if (auto host_addr = sim->addr_to_mem(paddr)) {
-    if(check_identifier(paddr, id, false)) {
+    if(check_identifier(paddr, enclave_id, false)) {
       memcpy(host_addr, bytes, len);
       if (tracer.interested_in_range(paddr, paddr + PGSIZE, STORE))
         tracer.trace(paddr, len, STORE); //TODO should tracer know about an unauthorized store?
       else
-        refill_tlb(addr, paddr, host_addr, STORE, id);
+        refill_tlb(addr, paddr, host_addr, STORE);
     } else {
 #ifdef PRAESIDIO_DEBUG
       fprintf(stderr, "mmu.cc: Error! Denying store access to enclave 0x%0lx, virtual address 0x%0lx, physical address 0x%0lx, number of pages %lu, page size 0x%0lx\n", id, addr, paddr, num_of_pages, PGSIZE);
@@ -167,7 +167,7 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
   }
 }
 
-tlb_entry_t mmu_t::refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_type type, enclave_id_t id)
+tlb_entry_t mmu_t::refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_type type)
 {
   reg_t idx = (vaddr >> PGSHIFT) % TLB_ENTRIES;
   reg_t expected_tag = vaddr >> PGSHIFT;
@@ -188,7 +188,15 @@ tlb_entry_t mmu_t::refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_
   else if (type == STORE) tlb_store_tag[idx] = expected_tag;
   else tlb_load_tag[idx] = expected_tag;
 
-  tlb_entry_t entry = {host_addr - vaddr, paddr - vaddr, id};
+  enclave_id_t owner = ENCLAVE_INVALID_ID;
+  enclave_id_t reader = ENCLAVE_INVALID_ID;
+  if(paddr >= DRAM_BASE && paddr < DRAM_BASE + PGSIZE*num_of_pages) {
+    reg_t dram_offset = paddr - DRAM_BASE;
+    reg_t page_num = dram_offset / PGSIZE;
+    owner = page_owners[page_num].owner;
+    reader = page_owners[page_num].reader;
+  }
+  tlb_entry_t entry = {host_addr - vaddr, paddr - vaddr, owner, reader};
   tlb_data[idx] = entry;
   return entry;
 }
