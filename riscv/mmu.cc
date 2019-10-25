@@ -49,16 +49,16 @@ reg_t mmu_t::translate(reg_t addr, access_type type)
   return walk(addr, type, mode) | (addr & (PGSIZE-1));
 }
 
-tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr, enclave_id_t id)
+tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr, enclave_id_t enclave_id)
 {
   reg_t paddr = translate(vaddr, FETCH);
   auto host_addr = sim->addr_to_mem(paddr);
   if (host_addr) {
-    if(check_identifier(paddr, id, true)) {
-      return refill_tlb(vaddr, paddr, host_addr, FETCH, id);
+    if(check_identifier(paddr, enclave_id, true)) {
+      return refill_tlb(vaddr, paddr, host_addr, FETCH, enclave_id);
     } else {
 #ifdef PRAESIDIO_DEBUG
-      fprintf(stderr, "mmu.cc: Error! Denying fetch to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", id, vaddr, host_addr, num_of_pages, PGSIZE);
+      fprintf(stderr, "mmu.cc: Error! Denying fetch to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", enclave_id, vaddr, host_addr, num_of_pages, PGSIZE);
 #endif
       throw trap_instruction_access_fault(vaddr);
     }
