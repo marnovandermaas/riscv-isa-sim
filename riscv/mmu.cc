@@ -53,9 +53,15 @@ tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr, enclave_id_t id)
 {
   reg_t paddr = translate(vaddr, FETCH);
   auto host_addr = sim->addr_to_mem(paddr);
-  //fprintf(stderr, "mmu.cc: fetch slow path: vaddr 0x%0lx, paddr 0x%0lx, haddr 0x%0lx\n", vaddr, paddr, host_addr);
   if (host_addr) {
-    return refill_tlb(vaddr, paddr, host_addr, FETCH, id);
+    if(check_identifier(paddr, id, true)) {
+      return refill_tlb(vaddr, paddr, host_addr, FETCH, id);
+    } else {
+#ifdef PRAESIDIO_DEBUG
+      fprintf(stderr, "mmu.cc: Error! Denying fetch to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", id, vaddr, host_addr, num_of_pages, PGSIZE);
+#endif
+      throw trap_instruction_access_fault(vaddr);
+    }
   } else {
     if (!sim->mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp))
       throw trap_instruction_access_fault(vaddr);

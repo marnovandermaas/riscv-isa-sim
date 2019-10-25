@@ -59,23 +59,23 @@ public:
   mmu_t(simif_t* sim, processor_t* proc, page_owner_t *page_owners, size_t num_pages);
   ~mmu_t();
 
-  inline reg_t misaligned_load(reg_t addr, size_t size)
+  inline reg_t misaligned_load(reg_t addr, size_t size, enclave_id_t enclave_id)
   {
 #ifdef RISCV_ENABLE_MISALIGNED
     reg_t res = 0;
     for (size_t i = 0; i < size; i++)
-      res += (reg_t)load_uint8(addr + i) << (i * 8);
+      res += (reg_t)load_uint8(addr + i, enclave_id) << (i * 8);
     return res;
 #else
     throw trap_load_address_misaligned(addr);
 #endif
   }
 
-  inline void misaligned_store(reg_t addr, reg_t data, size_t size)
+  inline void misaligned_store(reg_t addr, reg_t data, size_t size, enclave_id_t enclave_id)
   {
 #ifdef RISCV_ENABLE_MISALIGNED
     for (size_t i = 0; i < size; i++)
-      store_uint8(addr + i, data >> (i * 8));
+      store_uint8(addr + i, data >> (i * 8), enclave_id);
 #else
     throw trap_store_address_misaligned(addr);
 #endif
@@ -83,16 +83,12 @@ public:
 
   // template for functions that load an aligned value from memory
   #define load_func(type) \
-    inline type##_t load_##type(reg_t addr) { \
+    inline type##_t load_##type(reg_t addr, enclave_id_t enclave_id) { \
       if (unlikely(addr & (sizeof(type##_t)-1))) \
-        return misaligned_load(addr, sizeof(type##_t)); \
+        return misaligned_load(addr, sizeof(type##_t), enclave_id); \
       reg_t vpn = addr >> PGSHIFT; \
-      enclave_id_t id = ENCLAVE_DEFAULT_ID; \
-      if(proc != NULL) { \
-        id = proc->get_enclave_id(); \
-      } \
       if (likely(tlb_load_tag[vpn % TLB_ENTRIES] == vpn)) { \
-        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == id) { \
+        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == enclave_id) { \
           return *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
         } \
       } \
@@ -103,28 +99,14 @@ public:
           if (matched_trigger) \
             throw *matched_trigger; \
         } \
-        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == id) { \
+        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == enclave_id) { \
           return data; \
         } \
       } \
       type##_t res; \
-      load_slow_path(addr, sizeof(type##_t), (uint8_t*)&res, id); \
+      load_slow_path(addr, sizeof(type##_t), (uint8_t*)&res, enclave_id); \
       return res; \
     }
-
-  // template for functions that load an aligned value from memory
-  /*#define load_func(type) \
-    inline type##_t load_##type(reg_t addr) { \
-      if (unlikely(addr & (sizeof(type##_t)-1))) \
-        return misaligned_load(addr, sizeof(type##_t)); \
-      type##_t res; \
-      enclave_id_t id = ENCLAVE_DEFAULT_ID; \
-      if(proc != NULL) { \
-        id = proc->get_enclave_id(); \
-      } \
-      load_slow_path(addr, sizeof(type##_t), (uint8_t*)&res, id); \
-      return res; \
-    }*/
 
   // load value from memory at aligned address; zero extend to register width
   load_func(uint8)
@@ -140,16 +122,12 @@ public:
 
   // template for functions that store an aligned value to memory
   #define store_func(type) \
-    void store_##type(reg_t addr, type##_t val) { \
+    void store_##type(reg_t addr, type##_t val, enclave_id_t enclave_id) { \
       if (unlikely(addr & (sizeof(type##_t)-1))) \
-        return misaligned_store(addr, val, sizeof(type##_t)); \
+        return misaligned_store(addr, val, sizeof(type##_t), enclave_id); \
       reg_t vpn = addr >> PGSHIFT; \
-      enclave_id_t id = ENCLAVE_DEFAULT_ID; \
-      if(proc != NULL) { \
-        id = proc->get_enclave_id(); \
-      } \
       if (likely(tlb_store_tag[vpn % TLB_ENTRIES] == vpn)) {\
-        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == id) {\
+        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == enclave_id) {\
           *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = val; \
           return; \
         } \
@@ -159,35 +137,23 @@ public:
           if (matched_trigger) \
             throw *matched_trigger; \
         } \
-        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == id) { \
+        if(tlb_data[vpn % TLB_ENTRIES].enclave_id == enclave_id) { \
           *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = val; \
           return; \
         } \
       } \
-      store_slow_path(addr, sizeof(type##_t), (const uint8_t*)&val, id); \
+      store_slow_path(addr, sizeof(type##_t), (const uint8_t*)&val, enclave_id); \
     }
-
-  // template for functions that store an aligned value to memory
-  /*#define store_func(type) \
-    void store_##type(reg_t addr, type##_t val) { \
-      if (unlikely(addr & (sizeof(type##_t)-1))) \
-        return misaligned_store(addr, val, sizeof(type##_t)); \
-      enclave_id_t id = ENCLAVE_DEFAULT_ID; \
-      if(proc != NULL) { \
-        id = proc->get_enclave_id(); \
-      } \
-      store_slow_path(addr, sizeof(type##_t), (const uint8_t*)&val, id); \
-    }*/
 
   // template for functions that perform an atomic memory operation
   #define amo_func(type) \
     template<typename op> \
-    type##_t amo_##type(reg_t addr, op f) { \
+    type##_t amo_##type(reg_t addr, op f, enclave_id_t enclave_id) { \
       if (addr & (sizeof(type##_t)-1)) \
         throw trap_store_address_misaligned(addr); \
       try { \
-        auto lhs = load_##type(addr); \
-        store_##type(addr, f(lhs)); \
+        auto lhs = load_##type(addr, enclave_id); \
+        store_##type(addr, f(lhs), enclave_id); \
         return lhs; \
       } catch (trap_load_page_fault& t) { \
         /* AMO faults should be reported as store faults */ \
@@ -198,23 +164,23 @@ public:
       } \
     }
 
-  void store_float128(reg_t addr, float128_t val)
+  void store_float128(reg_t addr, float128_t val, enclave_id_t enclave_id)
   {
 #ifndef RISCV_ENABLE_MISALIGNED
     if (unlikely(addr & (sizeof(float128_t)-1)))
       throw trap_store_address_misaligned(addr);
 #endif
-    store_uint64(addr, val.v[0]);
-    store_uint64(addr + 8, val.v[1]);
+    store_uint64(addr, val.v[0], enclave_id);
+    store_uint64(addr + 8, val.v[1], enclave_id);
   }
 
-  float128_t load_float128(reg_t addr)
+  float128_t load_float128(reg_t addr, enclave_id_t enclave_id)
   {
 #ifndef RISCV_ENABLE_MISALIGNED
     if (unlikely(addr & (sizeof(float128_t)-1)))
       throw trap_load_address_misaligned(addr);
 #endif
-    return (float128_t){load_uint64(addr), load_uint64(addr + 8)};
+    return (float128_t){load_uint64(addr, enclave_id), load_uint64(addr + 8, enclave_id)};
   }
 
   // store value to memory at aligned address

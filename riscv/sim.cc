@@ -356,7 +356,7 @@ void sim_t::idle()
 void sim_t::read_chunk(addr_t taddr, size_t len, void* dst)
 {
   assert(len == 8);
-  auto data = debug_mmu->load_uint64(taddr);
+  auto data = debug_mmu->load_uint64(taddr, ENCLAVE_DEFAULT_ID);
   memcpy(dst, &data, sizeof data);
 }
 
@@ -365,7 +365,7 @@ void sim_t::write_chunk(addr_t taddr, size_t len, const void* src)
   assert(len == 8);
   uint64_t data;
   memcpy(&data, src, sizeof data);
-  debug_mmu->store_uint64(taddr, data);
+  debug_mmu->store_uint64(taddr, data, ENCLAVE_DEFAULT_ID);
 }
 
 void sim_t::proc_reset(unsigned id)

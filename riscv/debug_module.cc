@@ -274,13 +274,13 @@ void debug_module_t::sb_read()
   reg_t address = ((uint64_t) sbaddress[1] << 32) | sbaddress[0];
   try {
     if (sbcs.sbaccess == 0 && max_bus_master_bits >= 8) {
-      sbdata[0] = sim->debug_mmu->load_uint8(address);
+      sbdata[0] = sim->debug_mmu->load_uint8(address, ENCLAVE_DEFAULT_ID);
     } else if (sbcs.sbaccess == 1 && max_bus_master_bits >= 16) {
-      sbdata[0] = sim->debug_mmu->load_uint16(address);
+      sbdata[0] = sim->debug_mmu->load_uint16(address, ENCLAVE_DEFAULT_ID);
     } else if (sbcs.sbaccess == 2 && max_bus_master_bits >= 32) {
-      sbdata[0] = sim->debug_mmu->load_uint32(address);
+      sbdata[0] = sim->debug_mmu->load_uint32(address, ENCLAVE_DEFAULT_ID);
     } else if (sbcs.sbaccess == 3 && max_bus_master_bits >= 64) {
-      uint64_t value = sim->debug_mmu->load_uint32(address);
+      uint64_t value = sim->debug_mmu->load_uint32(address, ENCLAVE_DEFAULT_ID);
       sbdata[0] = value;
       sbdata[1] = value >> 32;
     } else {
@@ -296,14 +296,14 @@ void debug_module_t::sb_write()
   reg_t address = ((uint64_t) sbaddress[1] << 32) | sbaddress[0];
   D(fprintf(stderr, "sb_write() 0x%x @ 0x%lx\n", sbdata[0], address));
   if (sbcs.sbaccess == 0 && max_bus_master_bits >= 8) {
-    sim->debug_mmu->store_uint8(address, sbdata[0]);
+    sim->debug_mmu->store_uint8(address, sbdata[0], ENCLAVE_DEFAULT_ID);
   } else if (sbcs.sbaccess == 1 && max_bus_master_bits >= 16) {
-    sim->debug_mmu->store_uint16(address, sbdata[0]);
+    sim->debug_mmu->store_uint16(address, sbdata[0], ENCLAVE_DEFAULT_ID);
   } else if (sbcs.sbaccess == 2 && max_bus_master_bits >= 32) {
-    sim->debug_mmu->store_uint32(address, sbdata[0]);
+    sim->debug_mmu->store_uint32(address, sbdata[0], ENCLAVE_DEFAULT_ID);
   } else if (sbcs.sbaccess == 3 && max_bus_master_bits >= 64) {
     sim->debug_mmu->store_uint64(address,
-        (((uint64_t) sbdata[1]) << 32) | sbdata[0]);
+        (((uint64_t) sbdata[1]) << 32) | sbdata[0], ENCLAVE_DEFAULT_ID);
   } else {
     sbcs.error = 3;
   }

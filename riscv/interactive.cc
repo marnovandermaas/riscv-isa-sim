@@ -279,17 +279,17 @@ reg_t sim_t::get_mem(const std::vector<std::string>& args)
   switch(addr % 8)
   {
     case 0:
-      val = mmu->load_uint64(addr);
+      val = mmu->load_uint64(addr, ENCLAVE_DEFAULT_ID);
       break;
     case 4:
-      val = mmu->load_uint32(addr);
+      val = mmu->load_uint32(addr, ENCLAVE_DEFAULT_ID);
       break;
     case 2:
     case 6:
-      val = mmu->load_uint16(addr);
+      val = mmu->load_uint16(addr, ENCLAVE_DEFAULT_ID);
       break;
     default:
-      val = mmu->load_uint8(addr);
+      val = mmu->load_uint8(addr, ENCLAVE_DEFAULT_ID);
       break;
   }
   return val;
@@ -308,7 +308,7 @@ void sim_t::interactive_str(const std::string& cmd, const std::vector<std::strin
   reg_t addr = strtol(args[0].c_str(),NULL,16);
 
   char ch;
-  while((ch = debug_mmu->load_uint8(addr++)))
+  while((ch = debug_mmu->load_uint8(addr++, ENCLAVE_DEFAULT_ID)))
     putchar(ch);
 
   putchar('\n');
