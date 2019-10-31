@@ -220,8 +220,12 @@ public:
     reg_t paddr = translate(vaddr, LOAD);
     if (auto host_addr = sim->addr_to_mem(paddr))
       load_reservation_address = refill_tlb(vaddr, paddr, host_addr, LOAD).target_offset + vaddr;
-    else
+    else {
+#ifdef PRAESIDIO_DEBUG
+      fprintf(stderr, "mmu.h: throwing load access fault for address 0x%016lx\n", vaddr);
+#endif
       throw trap_load_access_fault(vaddr); // disallow LR to I/O space
+    }
   }
 
   inline bool check_load_reservation(reg_t vaddr)
