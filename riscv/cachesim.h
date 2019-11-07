@@ -125,6 +125,10 @@ class cache_memtracer_t : public memtracer_t
   {
     cache = cache_sim_t::construct(config, name);
   }
+  cache_memtracer_t(size_t sets, size_t ways, size_t linesz, const char* name)
+  {
+    cache = new cache_sim_t(sets, ways, linesz, name);
+  }
   ~cache_memtracer_t()
   {
     delete cache;
@@ -133,13 +137,36 @@ class cache_memtracer_t : public memtracer_t
   {
     cache->set_miss_handler(mh);
   }
-
+  void set_miss_handler(cache_memtracer_t* mh)
+  {
+    cache->set_miss_handler(mh->cache);
+  }
   void print_stats(bool csv_style=false) {
     cache->print_stats(csv_style);
   }
 
  protected:
   cache_sim_t* cache;
+};
+
+//l2 cache subclass of memory tracer
+class l2cache_sim_t : public cache_memtracer_t
+{
+ public:
+  l2cache_sim_t(const char* config, const char* name) : cache_memtracer_t(config, name) {}
+  l2cache_sim_t(size_t sets, size_t ways, size_t linesz, const char* name) : cache_memtracer_t(sets, ways, linesz, name) {}
+  l2cache_sim_t(size_t sets, size_t ways, size_t linesz, const char* name, partitioned_cache_sim_t* l2, enclave_id_t id) : cache_memtracer_t(sets, ways, linesz, name) {
+    delete cache;
+    cache = new remapping_table_t(sets, ways, linesz, name, l2, id);
+  }
+  bool interested_in_range(uint64_t begin, uint64_t end, access_type type)
+  {
+    return true;
+  }
+  void trace(uint64_t addr, size_t bytes, access_type type)
+  {
+    cache->access(addr, bytes, type == STORE);
+  }
 };
 
 //instruction cache subclass of memory tracer
