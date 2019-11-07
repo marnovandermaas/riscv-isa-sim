@@ -48,7 +48,6 @@ void sim_t::request_halt(uint32_t id)
   while(true) {
     if(csv_style) {
       fprintf(stdout, "\n>>>>>CACHE_OUTPUT<<<<<\n");
-      //fprintf(stdout, "bytes read, bytes written, read accesses, write accesses, read misses, write misses, writebacks, miss rate, read misses in LLC, write misses in LLC, total miss rate\n");
     }
     for(size_t i = 0; i < nenclaves + 1; i++)
     {

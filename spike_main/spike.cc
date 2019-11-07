@@ -96,16 +96,6 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
           break;
         }
       }
-      //Example using io streams:
-      //std::ifstream management_file ("management.bin", std::ios::in|std::ios::binary);
-      //if(!management_file.good()) {
-      //  fprintf(stderr, "spike.cc: ERROR could not open management file.\n");
-      //  exit(-1);
-      //}
-      //size_t file_size = PGSIZE;
-      //char *memblock = (char *) calloc(file_size, sizeof(char));
-      //management_file.read(memblock, file_size);
-      //management_file.close();
       //TODO make these extra pages be local per processor.
       size_t management_memory_size = MANAGEMENT_ENCLAVE_SIZE + PGSIZE*num_enclaves; //We need to add extra pages for the stacks of the management code.
       //fprintf(stderr, "spike.cc: size 0x%lx, original size 0x%x, num enclaves 0x%lx at base: 0x%lx\n", management_memory_size, MANAGEMENT_ENCLAVE_SIZE, num_enclaves, MANAGEMENT_ENCLAVE_BASE);
@@ -115,7 +105,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
 #ifdef PRAESIDIO_DEBUG
     fprintf(stderr, "spike.cc: making working memory at base: 0x%0x\n", DRAM_BASE);
-#endif
+#endif //PRAESIDIO_DEBUG
     memory_vector[0] = std::make_pair(reg_t(DRAM_BASE), new mem_t(size));
     return memory_vector;
   }
@@ -123,22 +113,22 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
   fprintf(stderr, "spike.cc: ERROR currently preasidio does not support multiple mapped working memories.\n");
   exit(-1);
   // handle base/size tuples
-  // std::vector<std::pair<reg_t, mem_t*>> res;
-  // while (true) {
-  //   auto base = strtoull(arg, &p, 0);
-  //   if (!*p || *p != ':')
-  //     help();
-  //   auto size = strtoull(p + 1, &p, 0);
-  //   if ((size | base) % PGSIZE != 0)
-  //     help();
-  //   res.push_back(std::make_pair(reg_t(base), new mem_t(size)));
-  //   if (!*p)
-  //     break;
-  //   if (*p != ',')
-  //     help();
-  //   arg = p + 1;
-  // }
-  // return res;
+  std::vector<std::pair<reg_t, mem_t*>> res;
+  while (true) {
+    auto base = strtoull(arg, &p, 0);
+    if (!*p || *p != ':')
+      help();
+    auto size = strtoull(p + 1, &p, 0);
+    if ((size | base) % PGSIZE != 0)
+      help();
+    res.push_back(std::make_pair(reg_t(base), new mem_t(size)));
+    if (!*p)
+      break;
+    if (*p != ',')
+      help();
+    arg = p + 1;
+  }
+  return res;
 }
 
 int main(int argc, char** argv)
@@ -315,7 +305,8 @@ int main(int argc, char** argv)
   }
 
   sim_t s(isa, nprocs + nenclaves, nenclaves, halted, start_pc, mems, htif_args, std::move(hartids),
-      progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2, rmts_arg, static_llc_arg, mailboxes, num_of_mailboxes, num_of_pages);
+      progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2, rmts_arg,
+      static_llc_arg, mailboxes, num_of_mailboxes, num_of_pages);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(new jtag_dtm_t(&s.debug_module));
   if (use_rbb) {
