@@ -223,7 +223,7 @@ public:
     else {
 #ifdef PRAESIDIO_DEBUG
       fprintf(stderr, "mmu.h: throwing load access fault for address 0x%016lx\n", vaddr);
-#endif
+#endif //PRAESIDIO_DEBUG
       throw trap_load_access_fault(vaddr); // disallow LR to I/O space
     }
   }

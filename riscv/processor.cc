@@ -562,15 +562,15 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_DSCRATCH:
       state.dscratch = val;
       break;
-    #ifdef BARE_METAL_OUTPUT_CSR
+#ifdef BARE_METAL_OUTPUT_CSR
     case CSR_BAREMETALOUTPUT:
       fprintf(stderr, "%c", ((int) val));
       break;
     case CSR_BAREMETALEXIT:
       sim->request_halt(id);//exit(0);
       break;
-    #endif //BARE_METAL_OUTPUT_CSR
-    #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
+#endif //BARE_METAL_OUTPUT_CSR
+#ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
     case CSR_ENCLAVEASSIGNREADER:
       //least significant 16-bits are the enclave ID the rest is page number.
       if(enclave_id == page_owners[val].owner) {//TODO check if val is not out of bounds
@@ -585,20 +585,20 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_ENCLAVESETARGID:
       state.arg_enclave_id = val;
       break;
-    #endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-    #ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
+#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
     case CSR_MANAGEENCLAVEID:
       //This instruction should only succeed if the pc is in within the management enclave.
       if ((state.pc >= MANAGEMENT_ENCLAVE_BASE) && (state.pc < MANAGEMENT_ENCLAVE_BASE + MANAGEMENT_ENCLAVE_SIZE))
       {
 #ifdef PRAESIDIO_DEBUG
         fprintf(stderr, "processor.cc: Enclave ID on core %u changed to 0x%lx\n", id, val);
-#endif
+#endif //PRAESIDIO_DEBUG
         enclave_id = val;
       } else {
 #ifdef PRAESIDIO_DEBUG
         fprintf(stderr, "processor.cc: WARNING: pc was not in management enclave code 0x%lx", state.pc);
-#endif
+#endif //PRAESIDIO_DEBUG
       }
       break;
     case CSR_MANAGECHANGEPAGETAG:
@@ -609,13 +609,13 @@ void processor_t::set_csr(int which, reg_t val)
           int index = (val & (DRAM_BASE - 1)) / PGSIZE; //Assume DRAM_BASE is just one set bit.
 #ifdef PRAESIDIO_DEBUG
           fprintf(stderr, "processor.cc: Changing page %d to tag: %lu\n", index, state.arg_enclave_id);
-#endif
+#endif //PRAESIDIO_DEBUG
           page_owners[index].owner = state.arg_enclave_id;
         } else {
           //TODO enable tagging for pages in boot ROM and management pages.
 #ifdef PRAESIDIO_DEBUG
           fprintf(stderr, "processor.cc: WARNING: Currently tagging pages outside of DRAM is not supported 0x%lx\n", val);
-#endif
+#endif //PRAESIDIO_DEBUG
         }
       }
       break;
@@ -625,7 +625,7 @@ void processor_t::set_csr(int which, reg_t val)
       mailbox->content = val;
 #ifdef PRAESIDIO_DEBUG
       fprintf(stderr, "processor.cc: core %u sending mailbox message: source 0x%016lx, destination 0x%016lx, content 0x%016lx\n", id, mailbox->source, mailbox->destination, mailbox->content);
-#endif
+#endif //PRAESIDIO_DEBUG
       break;
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
 #ifdef COVERT_CHANNEL_POC
@@ -661,14 +661,14 @@ reg_t processor_t::get_csr(int which)
   if (which >= CSR_MHPMEVENT3 && which <= CSR_MHPMEVENT31)
     return 0;
 
-  #ifdef BARE_METAL_OUTPUT_CSR
+#ifdef BARE_METAL_OUTPUT_CSR
   if (which == CSR_BAREMETALOUTPUT || which == CSR_BAREMETALEXIT)
   {
     return 0;
   }
-  #endif //BARE_METAL_OUTPUT_CSR
+#endif //BARE_METAL_OUTPUT_CSR
 
-  #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
+#ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
   if (which == CSR_ENCLAVEASSIGNREADER || which == CSR_ENCLAVEDONATEPAGE)
   {
     return 0;
@@ -687,9 +687,9 @@ reg_t processor_t::get_csr(int which)
     }
     return 0;
   }
-  #endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
+#endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
 
-  #ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
   if (which == CSR_MANAGEENCLAVEID)
   {
     return enclave_id;
@@ -706,7 +706,7 @@ reg_t processor_t::get_csr(int which)
       if(message->destination == enclave_id) {
 #ifdef PRAESIDIO_DEBUG
         fprintf(stderr, "processor.cc: core %u at pc 0x%016lx found messages in box %lu, with message: source 0x%016lx, destination 0x%016lx, content 0x%016lx\n", id, state.pc, i, message->source, message->destination, message->content);
-#endif
+#endif //PRAESIDIO_DEBUG
         state.arg_enclave_id = message->source; //TODO this is a security problem.
         message->destination = ENCLAVE_INVALID_ID;
         message->source = ENCLAVE_INVALID_ID;
@@ -784,7 +784,7 @@ reg_t processor_t::get_csr(int which)
         require_privilege(PRV_M);
 #ifdef PRAESIDIO_DEBUG
       printf("processor.cc: reading satp 0x%lx\n",state.satp);
-#endif
+#endif //PRAESIDIO_DEBUG
       return state.satp;
     case CSR_SSCRATCH: return state.sscratch;
     case CSR_MSTATUS: return state.mstatus;
