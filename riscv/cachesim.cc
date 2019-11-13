@@ -142,7 +142,7 @@ uint64_t cache_sim_t::victimize(uint64_t addr)
   return victim;
 }
 
-void cache_sim_t::access(uint64_t addr, size_t bytes, bool store)
+cache_result cache_sim_t::access(uint64_t addr, size_t bytes, bool store)
 {
   store ? write_accesses++ : read_accesses++;
   (store ? bytes_written : bytes_read) += bytes;
@@ -152,7 +152,7 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store)
   {
     if (store)
       *hit_way |= DIRTY;
-    return;
+    return CACHE_HIT;
   }
 
   store ? write_misses++ : read_misses++;
@@ -167,11 +167,26 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store)
     writebacks++;
   }
 
-  if (miss_handler)
-    miss_handler->access(addr & ~(linesz-1), linesz, false);
+  cache_result return_value = CACHE_MISS;
+  if (miss_handler) {
+    cache_result handler_result = miss_handler->access(addr & ~(linesz-1), linesz, false);
+    switch(handler_result) {
+      case CACHE_HIT:
+        return_value = CACHE_MISS_HIT;
+        break;
+      case CACHE_MISS:
+        return_value = CACHE_MISS_MISS;
+        break;
+      default:
+        fprintf(stderr, "cachesim.cc: WARNING more than two levels of cache is not supported.\n");
+        break;
+    }
+  }
 
   if (store)
     *check_tag(addr) |= DIRTY;
+
+  return return_value;
 }
 
 void cache_sim_t::set_miss_handler(cache_sim_t* mh)
@@ -191,7 +206,7 @@ remapping_table_t::remapping_table_t(size_t _sets, size_t _ways, size_t _linesz,
   slots = new size_t[sets*ways]();
 }
 
-void remapping_table_t::access(uint64_t addr, size_t bytes, bool store)
+cache_result remapping_table_t::access(uint64_t addr, size_t bytes, bool store)
 {
     store ? write_accesses++ : read_accesses++;
     (store ? bytes_written : bytes_read) += bytes;
@@ -212,7 +227,7 @@ void remapping_table_t::access(uint64_t addr, size_t bytes, bool store)
         if (store) {
           *hit_way |= DIRTY;
         }
-        return;
+        return CACHE_HIT;
       }
     }
 
@@ -235,11 +250,15 @@ void remapping_table_t::access(uint64_t addr, size_t bytes, bool store)
       writebacks++;
     }
 
-    if (miss_handler)
+    if (miss_handler) {
       miss_handler->access(addr & ~(linesz-1), linesz, false);
+      fprintf(stderr, "cachesim.cc: WARNING more than two levels of cache is not supported.\n");
+    }
 
     if (store)
       *check_tag(addr, &index) |= DIRTY;
+
+    return CACHE_MISS;
 }
 
 uint64_t* remapping_table_t::check_tag(uint64_t addr, size_t *index)

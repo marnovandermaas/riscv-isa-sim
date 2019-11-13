@@ -627,7 +627,15 @@ void processor_t::set_csr(int which, reg_t val)
       fprintf(stderr, "processor.cc: core %u sending mailbox message: source 0x%016lx, destination 0x%016lx, content 0x%016lx\n", id, mailbox->source, mailbox->destination, mailbox->content);
 #endif
       break;
-    #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#ifdef COVERT_CHANNEL_POC
+    case CSR_LLCMISSCOUNT:
+      state.llc_miss_count++;
+#ifdef PRAESIDIO_DEBUG
+      fprintf(stderr, "processor.cc: setting lcc_miss_count to: 0x%lx\n", state.lcc_miss_count);
+#endif //PRAESIDIO_DEBUG
+      break;
+#endif //COVERT_CHANNEL_POC
   }
 }
 
@@ -708,7 +716,13 @@ reg_t processor_t::get_csr(int which)
     state.arg_enclave_id = ENCLAVE_INVALID_ID;
     return 0;
   }
-  #endif // MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#endif // MANAGEMENT_ENCLAVE_INSTRUCTIONS
+
+#ifdef COVERT_CHANNEL_POC
+  if (which == CSR_LLCMISSCOUNT) {
+    return state.llc_miss_count;
+  }
+#endif //COVERT_CHANNEL_POC
 
   switch (which)
   {

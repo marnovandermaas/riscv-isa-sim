@@ -12,6 +12,13 @@
 
 typedef size_t slot_id_t;
 
+enum cache_result {
+  CACHE_HIT,
+  CACHE_MISS,
+  CACHE_MISS_HIT,
+  CACHE_MISS_MISS,
+};
+
 //Linear-feedback shift register
 class lfsr_t
 {
@@ -33,7 +40,7 @@ class cache_sim_t
   cache_sim_t(const cache_sim_t& rhs);
   virtual ~cache_sim_t();
 
-  virtual void access(uint64_t addr, size_t bytes, bool store);
+  virtual cache_result access(uint64_t addr, size_t bytes, bool store);
   void print_stats(bool csv_style=false);
   void set_miss_handler(cache_sim_t* mh);
 
@@ -92,7 +99,7 @@ class remapping_table_t : public cache_sim_t
   public:
     remapping_table_t(size_t sets, size_t ways, size_t linesz, const char* name, partitioned_cache_sim_t* l2, enclave_id_t id); //Assuming direct mapped for now (way = 1)
     void print_stats(bool csv_style=false);
-    virtual void access(uint64_t addr, size_t bytes, bool store);
+    virtual cache_result access(uint64_t addr, size_t bytes, bool store);
   private:
     partitioned_cache_sim_t *llc;
     enclave_id_t enclave_id;
@@ -163,9 +170,17 @@ class l2cache_sim_t : public cache_memtracer_t
   {
     return true;
   }
-  void trace(uint64_t addr, size_t bytes, access_type type)
+  trace_result trace(uint64_t addr, size_t bytes, access_type type)
   {
-    cache->access(addr, bytes, type == STORE);
+    switch(cache->access(addr, bytes, type == STORE)) {
+      case CACHE_MISS:
+        return LLC_MISS;
+      case CACHE_HIT:
+        return LLC_HIT;
+      default:
+        fprintf(stderr, "cachesim.h: WARNING this case should not happen in l2cache_sim_t unless there is a third level cache\n");
+        return NO_LLC_INTERACTION;
+    }
   }
 };
 
@@ -178,9 +193,20 @@ class icache_sim_t : public cache_memtracer_t
   {
     return type == FETCH;
   }
-  void trace(uint64_t addr, size_t bytes, access_type type)
+  trace_result trace(uint64_t addr, size_t bytes, access_type type)
   {
-    if (type == FETCH) cache->access(addr, bytes, false);
+    if (type == FETCH)
+    {
+      switch(cache->access(addr, bytes, false)) {
+        case CACHE_MISS_MISS:
+          return LLC_MISS;
+        case CACHE_MISS_HIT:
+          return LLC_HIT;
+        default:
+          return NO_LLC_INTERACTION;
+      }
+    }
+    return NO_LLC_INTERACTION;
   }
 };
 
@@ -193,9 +219,20 @@ class dcache_sim_t : public cache_memtracer_t
   {
     return type == LOAD || type == STORE;
   }
-  void trace(uint64_t addr, size_t bytes, access_type type)
+  trace_result trace(uint64_t addr, size_t bytes, access_type type)
   {
-    if (type == LOAD || type == STORE) cache->access(addr, bytes, type == STORE);
+    if (type == LOAD || type == STORE)
+    {
+      switch(cache->access(addr, bytes, type == STORE)) {
+        case CACHE_MISS_MISS:
+          return LLC_MISS;
+        case CACHE_MISS_HIT:
+          return LLC_HIT;
+        default:
+          return NO_LLC_INTERACTION;
+      }
+    }
+    return NO_LLC_INTERACTION;
   }
 };
 

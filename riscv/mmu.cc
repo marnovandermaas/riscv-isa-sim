@@ -114,10 +114,15 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t e
   if (auto host_addr = sim->addr_to_mem(paddr)) {
     if(check_identifier(paddr, enclave_id, true)) {
       memcpy(bytes, host_addr, len);
-      if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD))
-        tracer.trace(paddr, len, LOAD); //TODO should tracer trace any unauthorized loads?
-      else
+      if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD)) {
+        if(tracer.trace(paddr, len, LOAD) == LLC_MISS) { //TODO should tracer trace any unauthorized loads?
+#ifdef COVERT_CHANNEL_POC
+          proc->set_csr(CSR_LLCMISSCOUNT, 1);
+#endif //COVERT_CHANNEL_POC
+        }
+      } else {
         refill_tlb(addr, paddr, host_addr, LOAD);
+      }
     } else {
 #ifdef PRAESIDIO_DEBUG
       fprintf(stderr, "mmu.cc: Warning! Denying load access to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", enclave_id, addr, paddr, num_of_pages, PGSIZE);

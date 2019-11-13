@@ -13,6 +13,12 @@ enum access_type {
   FETCH,
 };
 
+enum trace_result {
+  NO_LLC_INTERACTION,
+  LLC_HIT,
+  LLC_MISS,
+};
+
 class memtracer_t
 {
  public:
@@ -20,7 +26,7 @@ class memtracer_t
   virtual ~memtracer_t() {}
 
   virtual bool interested_in_range(uint64_t begin, uint64_t end, access_type type) = 0;
-  virtual void trace(uint64_t addr, size_t bytes, access_type type) = 0;
+  virtual trace_result trace(uint64_t addr, size_t bytes, access_type type) = 0;
 };
 
 class memtracer_list_t : public memtracer_t
@@ -34,10 +40,17 @@ class memtracer_list_t : public memtracer_t
         return true;
     return false;
   }
-  void trace(uint64_t addr, size_t bytes, access_type type)
+  trace_result trace(uint64_t addr, size_t bytes, access_type type)
   {
-    for (std::vector<memtracer_t*>::iterator it = list.begin(); it != list.end(); ++it)
-      (*it)->trace(addr, bytes, type);
+    trace_result return_value = NO_LLC_INTERACTION;
+    trace_result temp_value;
+    for (std::vector<memtracer_t*>::iterator it = list.begin(); it != list.end(); ++it) {
+      temp_value = (*it)->trace(addr, bytes, type);
+      if(temp_value != NO_LLC_INTERACTION) {
+        return_value = temp_value;
+      }
+    }
+    return return_value;
   }
   void hook(memtracer_t* h)
   {
