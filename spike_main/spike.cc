@@ -35,6 +35,7 @@ static void help()
   fprintf(stderr, "  --l2=<S>:<W>:<B>        B both powers of 2).\n");
   fprintf(stderr, "  --extension=<name>    Specify RoCC Extension\n");
   fprintf(stderr, "  --enclave=<number>    Number of enclave threads to add [default 0]\n");
+  fprintf(stderr, "  --manage-path=<path>  Path to management shim binary [default ../build/management.bin]\n");
   fprintf(stderr, "  --extlib=<name>       Shared library to load\n");
   fprintf(stderr, "  --rbb-port=<port>     Listen on <port> for remote bitbang connection\n");
   fprintf(stderr, "  --dump-dts            Print device tree string and exit\n");
@@ -46,7 +47,7 @@ static void help()
   exit(1);
 }
 
-static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *num_of_pages, size_t num_enclaves)
+static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *num_of_pages, size_t num_enclaves, const char* management_path)
 {
   // handle legacy mem argument
   char* p;
@@ -73,7 +74,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
     if (num_enclaves > 0) {
       //This initializes the memory enclave memory device (4 pages in size for now)
       FILE *management_file;
-      management_file = fopen("../build/management.bin", "rb");
+      management_file = fopen(management_path, "rb");
       if(management_file == NULL) {
         fprintf(stderr, "spike.cc: ERROR could not open management file.\n");
         exit(-1);
@@ -142,6 +143,7 @@ int main(int argc, char** argv)
   bool dtb_enabled = true;
   size_t nprocs = 1;
   size_t nenclaves = 0;
+  char manage_path[1024] = "../build/management.bin";
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
   const char* ic_string = NULL;
@@ -175,12 +177,13 @@ int main(int argc, char** argv)
   option_parser_t parser;
   parser.help(&help);
   parser.option(0, "enclave", 1, [&](const char* s){nenclaves = atoi(s) + 1;}); //TODO remove the plus one and make sure that the first enclave core is not just reserved for management stuff.
+  parser.option(0, "manage-path", 1, [&](const char* s){strncpy(manage_path, s, 1024);});
   parser.option('h', 0, 0, [&](const char* s){help();});
   parser.option('d', 0, 0, [&](const char* s){debug = true;});
   parser.option('g', 0, 0, [&](const char* s){histogram = true;});
   parser.option('l', 0, 0, [&](const char* s){log = true;});
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
-  parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s, &num_of_pages, nenclaves);});
+  parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s, &num_of_pages, nenclaves, manage_path);});
   // I wanted to use --halted, but for some reason that doesn't work.
   parser.option('H', 0, 0, [&](const char* s){halted = true;});
   parser.option(0, "rbb-port", 1, [&](const char* s){use_rbb = true; rbb_port = atoi(s);});
@@ -210,7 +213,7 @@ int main(int argc, char** argv)
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
   if (mems.empty())
-    mems = make_mems("2048", &num_of_pages, nenclaves);
+    mems = make_mems("2048", &num_of_pages, nenclaves, manage_path);
 
   if (!*argv1)
     help();
