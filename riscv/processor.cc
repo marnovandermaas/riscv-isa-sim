@@ -564,7 +564,7 @@ void processor_t::set_csr(int which, reg_t val)
       break;
 #ifdef BARE_METAL_OUTPUT_CSR
     case CSR_BAREMETALOUTPUT:
-      fprintf(stderr, "%c", ((int) val));
+      fprintf(stderr, "%c", ((int) val & 0xFF));
       break;
     case CSR_BAREMETALEXIT:
       sim->request_halt(id);//exit(0);
