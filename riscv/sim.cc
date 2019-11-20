@@ -249,8 +249,35 @@ bool sim_t::mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
 
 void sim_t::make_dtb()
 {
-  const int reset_vec_size = 8;
+#ifdef COVERT_CHANNEL_POC
+//TODO define new reset vec that jumps to __reader   = 0x80000000; and __sender   = 0x80004000;
+  const int reset_vec_size = 12;
+  reg_t reader_pc = 0x80000000;
+  reg_t sender_pc = 0x80004000;
+  reg_t start_pc = get_entry_point();
+  
+  uint32_t reset_vec[reset_vec_size] = {
+    0x00000297,                                 // auipc  t0,0x0
+    0x00028593 + (reset_vec_size * 4 << 20),    // addi   a1, t0, &dtb
+    0xf1402573,                                 // csrr   a0, mhartid
+    0x00051663,                                 // bne a0, zero, 2
+    get_core(0)->get_xlen() == 32 ? //t0 containst 0x1000 at this point and adding 32 to it makes it check 8 words later, which points to the reader_pc as you can see below.
+      0x0202a283u :                             // lw     t0,32(t0)
+      0x0202b283u,                              // ld     t0,32(t0)
+    0x00028067,                                 // jr     t0
+    get_core(0)->get_xlen() == 32 ? //t0 containst 0x1000 at this point and adding 40 to it makes it check 10 words later, which points to the sender_pc as you can see below.
+      0x0282a283u :                             // lw     t0,40(t0)
+      0x0282b283u,                              // ld     t0,40(t0)
+    0x00028067,                                 // jr     t0
+    (uint32_t) (reader_pc & 0xffffffff),
+    (uint32_t) (reader_pc >> 32),
+    (uint32_t) (sender_pc & 0xffffffff),
+    (uint32_t) (sender_pc >> 32)
+  };
 
+
+#else //COVERT_CHANNEL_POC
+  const int reset_vec_size = 8;
   if(start_pc == reg_t(-1)) {
     start_pc = get_entry_point(); //This is the get_entry_point function of htif_t found in riscv fesvr
 #ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
@@ -262,7 +289,7 @@ void sim_t::make_dtb()
   }
 #ifdef PRAESIDIO_DEBUG
   fprintf(stderr, "sim.cc: Adding boot rom with start_pc %016lx\n", start_pc);
-#endif
+#endif //PRAESIDIO_DEBUG
 
   uint32_t reset_vec[reset_vec_size + nenclaves + 1] = {
     0x297,                                      // auipc  t0,0x0
@@ -288,7 +315,8 @@ void sim_t::make_dtb()
   for(size_t i = 0; i < reset_vec_size + nenclaves + 1; i++) {
     fprintf(stderr, "sim.cc: 0x%08x,\n", reset_vec[i]);
   }
-#endif
+#endif //PRAESIDIO_DEBUG
+#endif //COVERT_CHANNEL_POC
 
   std::vector<char> rom((char*)reset_vec, (char*)reset_vec + sizeof(reset_vec));
 
