@@ -348,6 +348,10 @@ void sim_t::reset()
 {
   if (dtb_enabled)
     make_dtb();
+
+#ifdef COVERT_CHANNEL_POC
+  page_owners[4].owner = 1; //This is so that I don't need a management enclave for the covert channel case.
+#endif //COVERT_CHANNEL_POC
 }
 
 void sim_t::idle()

@@ -632,7 +632,7 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_LLCMISSCOUNT:
       state.llc_miss_count++;
 #ifdef PRAESIDIO_DEBUG
-      fprintf(stderr, "processor.cc: setting lcc_miss_count to: 0x%lx\n", state.lcc_miss_count);
+      fprintf(stderr, "processor.cc: setting lcc_miss_count to: 0x%lx\n", state.llc_miss_count);
 #endif //PRAESIDIO_DEBUG
       break;
 #endif //COVERT_CHANNEL_POC

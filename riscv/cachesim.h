@@ -9,6 +9,7 @@
 #include <string>
 #include <map>
 #include <cstdint>
+#include "debug.h"
 
 typedef size_t slot_id_t;
 
@@ -168,12 +169,15 @@ class l2cache_sim_t : public cache_memtracer_t
   }
   bool interested_in_range(uint64_t begin, uint64_t end, access_type type)
   {
-    return true;
+    return (type != FETCH);
   }
   trace_result trace(uint64_t addr, size_t bytes, access_type type)
   {
     switch(cache->access(addr, bytes, type == STORE)) {
       case CACHE_MISS:
+#ifdef PRAESIDIO_DEBUG
+        fprintf(stderr, "cachesim.h: l2 cache miss for address 0x%016lx, size %lu\n", addr, bytes);
+#endif //PRAESIDIO_DEBUG
         return LLC_MISS;
       case CACHE_HIT:
         return LLC_HIT;
