@@ -13,6 +13,7 @@
 #include <string>
 #include <memory>
 #include "debug.h"
+#include <unistd.h>
 
 static void help()
 {
@@ -76,7 +77,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
       FILE *management_file;
       management_file = fopen(management_path, "rb");
       if(management_file == NULL) {
-        fprintf(stderr, "spike.cc: ERROR could not open management file.\n");
+        fprintf(stderr, "spike.cc: ERROR could not open management file: %s.\n", management_path);
         exit(-1);
       }
       size_t file_size = PGSIZE;
@@ -143,7 +144,9 @@ int main(int argc, char** argv)
   bool dtb_enabled = true;
   size_t nprocs = 1;
   size_t nenclaves = 0;
-  char manage_path[1024] = "../../management.bin";
+  char manage_path[1024];
+  strncpy(manage_path, get_current_dir_name(), 1024);
+    strncat(manage_path, "/work/riscv-isa-sim/management.bin", 1024);
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
   const char* ic_string = NULL;
