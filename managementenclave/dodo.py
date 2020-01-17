@@ -12,7 +12,7 @@ output = "run.out"
 binaryFile = "management.bin"
 dumpFile = "memory.dump"
 
-riscvPrefix = "riscv64-unknown-elf-"
+riscvPrefix = "riscv64-unknown-linux-gnu-"
 compiler = riscvPrefix+"gcc"
 compilerFlags = " -nostdlib -mcmodel=medany -Tlink.ld "
 
@@ -44,7 +44,7 @@ def task_object():
 def task_bin():
   return {
     'actions': [riscvPrefix+"objcopy -O binary " + output + " " + binaryFile,
-        'cp ' + binaryFile + " ../build/"],
+        'cp ' + binaryFile + " ../../work/riscv-isa-sim/"],
     'file_dep': [output],
     'targets': [binaryFile],
     'clean': True
