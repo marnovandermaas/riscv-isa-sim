@@ -10,7 +10,8 @@
 
 std::string make_dts(size_t insns_per_rtc_tick, size_t cpu_hz,
                      std::vector<processor_t*> procs,
-                     std::vector<std::pair<reg_t, mem_t*>> mems)
+                     std::vector<std::pair<reg_t, mem_t*>> mems,
+                   size_t nenclaves)
 {
   std::stringstream s;
   s << std::dec <<
@@ -25,7 +26,7 @@ std::string make_dts(size_t insns_per_rtc_tick, size_t cpu_hz,
          "    #address-cells = <1>;\n"
          "    #size-cells = <0>;\n"
          "    timebase-frequency = <" << (cpu_hz/insns_per_rtc_tick) << ">;\n";
-  for (size_t i = 0; i < procs.size(); i++) {
+  for (size_t i = 0; i < procs.size() - nenclaves; i++) {
     s << "    CPU" << i << ": cpu@" << i << " {\n"
          "      device_type = \"cpu\";\n"
          "      reg = <" << i << ">;\n"
@@ -58,7 +59,7 @@ std::string make_dts(size_t insns_per_rtc_tick, size_t cpu_hz,
          "    clint@" << CLINT_BASE << " {\n"
          "      compatible = \"riscv,clint0\";\n"
          "      interrupts-extended = <" << std::dec;
-  for (size_t i = 0; i < procs.size(); i++)
+  for (size_t i = 0; i < procs.size() - nenclaves; i++)
     s << "&CPU" << i << "_intc 3 &CPU" << i << "_intc 7 ";
   reg_t clintbs = CLINT_BASE;
   reg_t clintsz = CLINT_SIZE;

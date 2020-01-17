@@ -295,7 +295,7 @@ void sim_t::make_dtb()
 
   std::vector<char> rom((char*)reset_vec, (char*)reset_vec + sizeof(reset_vec));
 
-  dts = make_dts(INSNS_PER_RTC_TICK, CPU_HZ, procs, mems);
+  dts = make_dts(INSNS_PER_RTC_TICK, CPU_HZ, procs, mems, nenclaves);
   std::string dtb = dts_compile(dts);
 
   rom.insert(rom.end(), dtb.begin(), dtb.end());
