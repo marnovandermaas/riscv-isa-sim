@@ -60,6 +60,7 @@ private:
   reg_t start_pc;
   std::string dts;
   std::unique_ptr<rom_device_t> boot_rom;
+  std::unique_ptr<rom_device_t> enclave_rom;
   std::unique_ptr<clint_t> clint;
   bus_t bus;
 

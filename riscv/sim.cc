@@ -264,7 +264,7 @@ void sim_t::make_dtb()
   fprintf(stderr, "sim.cc: Adding boot rom with start_pc %016lx\n", start_pc);
 #endif
 
-  uint32_t reset_vec[reset_vec_size + nenclaves + 1] = {
+  uint32_t reset_vec[reset_vec_size] = {
     0x297,                                      // 0x1000: auipc  t0,0x0
     0x28593 + (reset_vec_size * 4 << 20),       // 0x1004: addi   a1, t0, &dtb
     0xf1402573,                                 // 0x1008: csrr   a0, mhartid
@@ -275,20 +275,23 @@ void sim_t::make_dtb()
     0,
     (uint32_t) (start_pc & 0xffffffff),         // 0x1014: This is the PC that is used by the above instructions to jump to the start pc.
     (uint32_t) (start_pc >> 32),                // 0x1018:
-    (uint32_t) (nenclaves & 0xffffffff)         // 0x101c:
+  };
+
+  uint32_t enclave_vec[nenclaves + 1] = {
+    (uint32_t) (nenclaves & 0xffffffff)
   };
 
   for (size_t i = 0; i < nenclaves; i++) {
     //TODO actually use the procs.id value
-    reset_vec[i + 1 + reset_vec_size] = procs.size() - nenclaves + i; //This statement assumes all ids are from 0..procs.size()-1
+    enclave_vec[i + 1] = procs.size() - nenclaves + i; //This statement assumes all ids are from 0..procs.size()-1
   }
 
-#ifdef PRAESIDIO_DEBUG
-  fprintf(stderr, "sim.cc: reset vector contents.\n");
-  for(size_t i = 0; i < reset_vec_size + nenclaves + 1; i++) {
-    fprintf(stderr, "sim.cc: 0x%08x,\n", reset_vec[i]);
-  }
-#endif
+// #ifdef PRAESIDIO_DEBUG
+//   fprintf(stderr, "sim.cc: reset vector contents.\n");
+//   for(size_t i = 0; i < reset_vec_size + nenclaves + 1; i++) {
+//     fprintf(stderr, "sim.cc: 0x%08x,\n", reset_vec[i]);
+//   }
+// #endif
 
   std::vector<char> rom((char*)reset_vec, (char*)reset_vec + sizeof(reset_vec));
 
@@ -301,6 +304,17 @@ void sim_t::make_dtb()
 
   boot_rom.reset(new rom_device_t(rom));
   bus.add_device(DEFAULT_RSTVEC, boot_rom.get());
+
+  std::vector<char> enclave_rom_vec((char*) enclave_vec, (char*)enclave_vec + sizeof(enclave_vec));
+  enclave_rom_vec.resize((enclave_rom_vec.size() + align - 1) / align * align);
+
+  if(rom.size() > align) {
+    fprintf(stderr, "ERROR: enclave rom cannot be located at 0x2000 because the device tree is too big.\n");
+    exit(-1);
+  }
+
+  enclave_rom.reset(new rom_device_t(enclave_rom_vec));
+  bus.add_device(DEFAULT_RSTVEC + align, enclave_rom.get());
 }
 
 char* sim_t::addr_to_mem(reg_t addr) {
