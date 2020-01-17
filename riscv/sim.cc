@@ -265,17 +265,17 @@ void sim_t::make_dtb()
 #endif
 
   uint32_t reset_vec[reset_vec_size + nenclaves + 1] = {
-    0x297,                                      // auipc  t0,0x0
-    0x28593 + (reset_vec_size * 4 << 20),       // addi   a1, t0, &dtb
-    0xf1402573,                                 // csrr   a0, mhartid
+    0x297,                                      // 0x1000: auipc  t0,0x0
+    0x28593 + (reset_vec_size * 4 << 20),       // 0x1004: addi   a1, t0, &dtb
+    0xf1402573,                                 // 0x1008: csrr   a0, mhartid
     get_core(0)->get_xlen() == 32 ? //t0 containst 0x1000 at this point and adding 24 to it makes it check 6 words later, which points to the start_pc as you can see below.
-      0x0182a283u :                             // lw     t0,24(t0)
-      0x0182b283u,                              // ld     t0,24(t0)
-    0x28067,                                    // jr     t0
+      0x0182a283u :                             // 0x100c: lw     t0,24(t0)
+      0x0182b283u,                              // 0x100c: ld     t0,24(t0)
+    0x28067,                                    // 0x1010: jr     t0
     0,
-    (uint32_t) (start_pc & 0xffffffff), //This is the PC that is used by the above instructions to jump to the start pc.
-    (uint32_t) (start_pc >> 32),
-    (uint32_t) (nenclaves & 0xffffffff)
+    (uint32_t) (start_pc & 0xffffffff),         // 0x1014: This is the PC that is used by the above instructions to jump to the start pc.
+    (uint32_t) (start_pc >> 32),                // 0x1018:
+    (uint32_t) (nenclaves & 0xffffffff)         // 0x101c:
   };
 
   for (size_t i = 0; i < nenclaves; i++) {
