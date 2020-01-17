@@ -259,7 +259,7 @@ Address_t initialize() {
   switchEnclaveID(ENCLAVE_MANAGEMENT_ID - coreID);
   flushRemappingTable();
   flushL1Cache();
-  CoreID_t *enclaveCores = (CoreID_t *) 0x1024 /*ROM location of enclave 0's core ID*/;
+  CoreID_t *enclaveCores = (CoreID_t *) 0x2000 /*ROM location of enclave 0's core ID*/;
   if(coreID == enclaveCores[0]) { //TODO fill state.enclaveCores
     switchEnclaveID(ENCLAVE_MANAGEMENT_ID);
 #ifdef PRAESIDIO_DEBUG
