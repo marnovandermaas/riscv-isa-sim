@@ -143,7 +143,7 @@ int main(int argc, char** argv)
   bool dtb_enabled = true;
   size_t nprocs = 1;
   size_t nenclaves = 0;
-  char manage_path[1024] = "../work/riscv-isa-sim/management.bin";
+  char manage_path[1024] = "../../management.bin";
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
   const char* ic_string = NULL;
