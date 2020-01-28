@@ -4,8 +4,8 @@
 .section .text.init
 entry:
     #TODO make the stack offset dependent on a variable in the linker script
-    auipc sp, 0x20000       #sp is pc plus 0x2000 0000 which is the stack location
-    csrrs a0, 0xF14, zero   #Read hartID into a0
+    auipc sp, 0x8           #sp is pc plus 0x8000 which is the stack location
+    auipc a0, 0x2           #a0 is the address of the communication page
     call  main              #Call the main function
 
 end:

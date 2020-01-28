@@ -1,4 +1,6 @@
 #include "praesidio.h"
+#include "praesidiouser.h"
+#include "praesidioenclave.h"
 
 #define READY_SIGNAL (0xAB)
 #define BUSY_SIGNAL (0xBA) //Must be different from READY_SIGNAL
