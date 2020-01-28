@@ -35,7 +35,7 @@ volatile char* get_receive_mailbox_base_address(enclave_id_t sender_id) {
   setArgumentEnclaveIdentifier(sender_id);
   do {
     asm volatile (
-      "csrrs %0, 0x40B, %0"
+      "csrrs %0, 0x40B, zero"
       : "=r"(retVal)
       :
       :
