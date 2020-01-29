@@ -5,7 +5,7 @@
 
 int give_read_permission(void* page_base, enclave_id_t receiver_id);
 
-volatile char* get_receive_mailbox_base_address(enclave_id_t sender_id);
+volatile void* get_receive_mailbox_base_address(enclave_id_t sender_id);
 
 //Writes a character to display.
 void output_char(char c);

@@ -2,11 +2,11 @@
 #include "praesidiouser.h"
 #include <linux/unistd.h>
 
-char* NW_give_read_permission(enclave_id_t receiver_id) {
+void* NW_create_send_mailbox(enclave_id_t receiver_id) {
   return syscall(__NR_create_send_mailbox, receiver_id);
 }
 
-volatile char* NW_get_receive_mailbox(enclave_id_t sender_id) {
+volatile void* NW_get_receive_mailbox(enclave_id_t sender_id) {
   return syscall(__NR_get_receive_mailbox, sender_id);
 }
 

@@ -5,11 +5,11 @@
 #include "instructions.h"
 #include "../riscv/encoding.h"
 
-#define NUMBER_OF_ENCLAVE_PAGES       (64)
+#define NUMBER_OF_ENCLAVE_PAGES       (2)
 #define NUMBER_OF_STACK_PAGES         (4)
-#define NUMBER_OF_COMMUNICATION_PAGES (1)
+#define NUMBER_OF_COMMUNICATION_PAGES (2)
 
-#define PAGE_TO_POINTER(NUM)          (((NUM * (1 << 12)) | DRAM_BASE))
+#define PAGE_TO_POINTER(NUM)          ((NUM << 12) | DRAM_BASE)
 
 //Sends message of length and encodes it at mailbox address. It returns the amount the mailbox_address should be increased by for the next message.
 int send_enclave_message(char *mailbox_address, char *message, int length);
