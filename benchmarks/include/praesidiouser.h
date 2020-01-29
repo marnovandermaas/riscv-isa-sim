@@ -3,20 +3,14 @@
 
 #include "praesidio.h"
 
-void NW_give_read_permission(void* address, enclave_id_t receiver_id);
+#define __NR_create_enclave       292
+#define __NR_create_send_mailbox  293
+#define __NR_get_receive_mailbox  294
 
-volatile char* NW_get_receive_mailbox_base_address(enclave_id_t sender_id);
+char* NW_create_send_mailbox(enclave_id_t receiver_id);
 
-//Sends message of length and encodes it at mailbox address. It returns the amount the mailbox_address should be increased by for the next message.
-int NW_send_enclave_message(char *mailbox_address, char *message, int length);
-
-//Gets message from mailbox_address and puts it into the read buffer. It returns the amount the mailbox_address should be increased by for the next message.
-int NW_get_enclave_message(volatile char *mailbox_address, char *read_buffer);
-
-void donate_page(int pageNumber, enclave_id_t receiver_id);
+volatile char* NW_get_receive_mailbox(enclave_id_t sender_id);
 
 enclave_id_t start_enclave();
-
-enclave_id_t start_enclave_fast(unsigned int num_pages_to_copy);
 
 #endif //PRAESIDIO_USER_HEADER

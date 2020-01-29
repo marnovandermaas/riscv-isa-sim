@@ -5,10 +5,16 @@
 #include "instructions.h"
 #include "../riscv/encoding.h"
 
-#define NUMBER_OF_ENCLAVE_PAGES (64)
-#define NUMBER_OF_STACK_PAGES (4)
+#define NUMBER_OF_ENCLAVE_PAGES       (64)
+#define NUMBER_OF_STACK_PAGES         (4)
 #define NUMBER_OF_COMMUNICATION_PAGES (1)
 
-#define PAGE_TO_POINTER(NUM) (((NUM * (1 << 12)) | DRAM_BASE))
+#define PAGE_TO_POINTER(NUM)          (((NUM * (1 << 12)) | DRAM_BASE))
+
+//Sends message of length and encodes it at mailbox address. It returns the amount the mailbox_address should be increased by for the next message.
+int send_enclave_message(char *mailbox_address, char *message, int length);
+
+//Gets message from mailbox_address and puts it into the read buffer. It returns the amount the mailbox_address should be increased by for the next message.
+int get_enclave_message(volatile char *mailbox_address, char *read_buffer);
 
 #endif //PRAESIDIO_HEADER

@@ -1,47 +1,43 @@
 #include "praesidio.h"
-#include "praesidiouser.h"
 #include "praesidioenclave.h"
 
 #define READY_SIGNAL (0xAB)
 #define BUSY_SIGNAL (0xBA) //Must be different from READY_SIGNAL
 
 //Sets read access to a page to an enclave
-void give_read_permission(int pageNumber, enclave_id_t receiver_id) {
-  char *busy_byte = (char *) PAGE_TO_POINTER((long) pageNumber);
-  busy_byte[0] = BUSY_SIGNAL;
+int give_read_permission(void* page_base, enclave_id_t receiver_id) {
+  int page_number = (page_base | DRAM_BASE) >> 12;
+  if (page_base < DRAM_BASE) { //Check if pagebase is in DRAM
+    return -1;
+  }
+  if (((page_base >> 12) << 12) != page_base) { //Check if lower bits are zero
+    return -2;
+  }
+  char *byte_base = (char *) page_base;
+  byte_base[0] = BUSY_SIGNAL;
   setArgumentEnclaveIdentifier(receiver_id);
   asm volatile (
     "csrrw zero, 0x40A, %0"
     :
-    : "r"(pageNumber)
+    : "r"(page_number)
     :
   );
-}
-
-//Donates a page to another enclave
-void donate_page(int pageNumber, enclave_id_t receiver_id) {
-  setArgumentEnclaveIdentifier(receiver_id);
-  asm volatile (
-    "csrrw zero, 0x40C, %0"
-    :
-    : "r"(pageNumber)
-    :
-  );
+  return 0;
 }
 
 //Gets base address of mailbox page from which you can receive messages from the enclave specified in sender_id.
 volatile char* get_receive_mailbox_base_address(enclave_id_t sender_id) {
-  volatile char* retVal = 0;
+  volatile char* ret_val = 0;
   setArgumentEnclaveIdentifier(sender_id);
   do {
     asm volatile (
       "csrrs %0, 0x40B, zero"
-      : "=r"(retVal)
+      : "=r"(ret_val)
       :
       :
     );
-  } while (retVal == 0);
-  return retVal;
+  } while (ret_val == 0);
+  return ret_val;
 }
 
 //Returns the starting index for the next message.
@@ -119,10 +115,6 @@ void output_string(char *s) {
     output_char(s[i]);
     i++;
   }
-}
-
-enclave_id_t start_enclave() {
-  start_enclave_fast(NUMBER_OF_ENCLAVE_PAGES);
 }
 
 int enclave_number = 0;
