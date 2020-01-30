@@ -1,3 +1,5 @@
+typedef unsigned long uint64_t; //TODO make sure it is 64-bit
+
 #include "instructions.h"
 
 void switchEnclaveID(enclave_id_t id) {
@@ -9,13 +11,13 @@ void switchEnclaveID(enclave_id_t id) {
   );
 }
 
-int* derivePhysicalCapability(struct PhysCap_t sourceCap) {
-  //TODO add inline instruction code here
-}
-
-void startNormalWorld() {
-  //TODO add inline instruction to signal the normal world to start here
-}
+// int* derivePhysicalCapability(struct PhysCap_t sourceCap) {
+//   //TODO add inline instruction code here
+// }
+//
+// void startNormalWorld() {
+//   //TODO add inline instruction to signal the normal world to start here
+// }
 
 CoreID_t getCoreID() {
   CoreID_t id;
@@ -28,13 +30,13 @@ CoreID_t getCoreID() {
   return id;
 }
 
-struct PhysCap_t getRootCapability() {
-  //TODO add inline instruction here
-}
-
-void setManagementInterruptTimer(int milis) {
-  //TODO add inline instruction to set the interupt time to milis amount of miliseconds.
-}
+// struct PhysCap_t getRootCapability() {
+//   //TODO add inline instruction here
+// }
+//
+// void setManagementInterruptTimer(int milis) {
+//   //TODO add inline instruction to set the interupt time to milis amount of miliseconds.
+// }
 
 enclave_id_t getCurrentEnclaveID() {
   enclave_id_t retVal;

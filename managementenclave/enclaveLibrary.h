@@ -7,6 +7,10 @@
 
 #define MANAGEMENT_ENCLAVE_BASE 0x04000000 //This number should be above 0x020c 0000 which is the end of CLINT and below 0x0400 0000 which is the start of IO
 
+// typedef unsigned long uint64_t; //TODO make sure it is 64-bit
+typedef unsigned short uint16_t; //TODO make sure it is 16-bit
+typedef unsigned int uint32_t; //TODO make sure it is 32-bit
+
 typedef uint64_t enclave_id_t;
 
 enum MessageType_t {

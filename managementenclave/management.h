@@ -1,11 +1,9 @@
 #ifndef PRAESIDIO_MANAGEMENT_H
 #define PRAESIDIO_MANAGEMENT_H
 
-typedef unsigned long uint64_t; //TODO make sure it is 64-bit
-
 #include "enclaveLibrary.h"
 
-#define PAGE_SIZE (1 << 12) //2^12 = 4096 number of Bytes
+#define PAGE_BIT_SHIFT (12)
 
 //Definition of the base addresses of the three trusted pages:
 #define MANAGEMENT_CODE_BASE_ADDRESS ((Address_t) MANAGEMENT_ENCLAVE_BASE)
@@ -16,9 +14,9 @@ typedef unsigned long uint64_t; //TODO make sure it is 64-bit
 #define NUMBER_OF_ENCLAVE_CORES 1
 
 typedef unsigned long Address_t;
-typedef unsigned short Permissions_t; //TODO make sure this is 16-bit
+typedef uint16_t Permissions_t;
 typedef int Register_t;
-typedef unsigned int CoreID_t; //TODO make sure this is 32-bit
+typedef uint32_t CoreID_t;
 
 struct Context_t {
   Register_t registerFile[32];
@@ -68,7 +66,5 @@ struct Message_t {
   enclave_id_t destination;
   unsigned long content; //Assuming that an int can fit an Address_t
 };
-
-void managementRoutine();
 
 #endif //PRAESIDIO_MANAGEMENT_H

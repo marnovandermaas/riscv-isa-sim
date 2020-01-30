@@ -5,11 +5,8 @@
 
 void switchEnclaveID(enclave_id_t id);
 int* derivePhysicalCapability(struct PhysCap_t sourceCap);
-void startNormalWorld();
-CoreID_t getCoreID();
-struct PhysCap_t getRootCapability();
-void setManagementInterruptTimer(int milis);
-enclave_id_t getCurrentEnclaveID();
+CoreID_t getCoreID(void);
+enclave_id_t getCurrentEnclaveID(void);
 //This is a helper instruction, but will be removed in final design
 void setArgumentEnclaveIdentifier(enclave_id_t id);
 void sendMessage(struct Message_t *txMsg);
