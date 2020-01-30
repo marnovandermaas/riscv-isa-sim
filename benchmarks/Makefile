@@ -34,8 +34,15 @@ $(BUILD_DIR)/%.o: $(INCLUDE_DIR)/%.c
 	@$(CC) $(CCFLAGS) -c $< -o $@
 	@echo "CC   <=  $<"
 
+$(BUILD_DIR)/%.o: $(MANAGE_DIR)/%.c
+	@$(CC) $(CCFLAGS) -c $< -o $@
+	@echo "CC   <=  $<"
 
 $(BUILD_DIR)/%.o: %.c
+	@$(CC) $(CCFLAGS) -c $< -o $@
+	@echo "CC   <=  $<"
+
+$(BUILD_DIR)/hello%.o: hello/%.c
 	@$(CC) $(CCFLAGS) -c $< -o $@
 	@echo "CC   <=  $<"
 
@@ -48,8 +55,8 @@ $(BUILD_DIR)/%.o: $(BITCNT_DIR)/%.c
 	@echo "CC   <=  $<"
 
 
-hello: $(OBJS) $(LIBC_OBJS) $(BUILD_DIR)/hello.o
-	@$(CC) $(LIBCFLAGS) $^ -o $@.out $(Enclave_Link_Flags)
+hello: $(OBJS) $(BUILD_DIR)/helloenclave.o
+	@$(CC) $(ENCLAVE_CCFLAGS) $^ -o $@.out
 	@echo "LINK =>  $@"
 
 # BITCNT_OBJS = $(BUILD_DIR)/bitcnt_1.o $(BUILD_DIR)/bitcnt_2.o $(BUILD_DIR)/bitcnt_3.o $(BUILD_DIR)/bitcnt_4.o

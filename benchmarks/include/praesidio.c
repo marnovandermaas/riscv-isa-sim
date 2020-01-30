@@ -6,11 +6,11 @@
 
 //Sets read access to a page to an enclave
 int give_read_permission(void* page_base, enclave_id_t receiver_id) {
-  int page_number = (page_base | DRAM_BASE) >> 12;
+  unsigned int page_number = ((unsigned int) page_base | DRAM_BASE) >> PAGE_BIT_SHIFT;
   if (page_base < DRAM_BASE) { //Check if pagebase is in DRAM
     return -1;
   }
-  if (((page_base >> 12) << 12) != page_base) { //Check if lower bits are zero
+  if ((((unsigned int) page_base >> PAGE_BIT_SHIFT) << PAGE_BIT_SHIFT) != page_base) { //Check if lower bits are zero
     return -2;
   }
   char *byte_base = (char *) page_base;
