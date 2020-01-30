@@ -454,25 +454,10 @@ void processor_t::set_csr(int which, reg_t val)
       if (max_xlen == 32)
         state.satp = val & (SATP32_PPN | SATP32_MODE);
 
-#ifdef PRAESIDIO_DEBUG
-      if (max_xlen == 64 && get_field(val, SATP64_MODE) != SATP_MODE_SV39 )
-
-        {
-          if(get_field(val, SATP64_MODE) == SATP_MODE_OFF)
-                    printf("processor.cc: in SATP_MODE_OFF mode\n");
-
-          printf("processor.cc: not in sv39 mode\n");
-
-        }
-#endif
-
       if (max_xlen == 64 && (get_field(val, SATP64_MODE) == SATP_MODE_OFF ||
                              get_field(val, SATP64_MODE) == SATP_MODE_SV39 ||
                              get_field(val, SATP64_MODE) == SATP_MODE_SV48)) {
         state.satp = val & (SATP64_PPN | SATP64_MODE);
-#ifdef PRAESIDIO_DEBUG
-        printf("processor.cc: setting satp to 0x%lx\n",state.satp);
-#endif
       }
 
       break;
@@ -782,9 +767,6 @@ reg_t processor_t::get_csr(int which)
     case CSR_SATP:
       if (get_field(state.mstatus, MSTATUS_TVM))
         require_privilege(PRV_M);
-#ifdef PRAESIDIO_DEBUG
-      printf("processor.cc: reading satp 0x%lx\n",state.satp);
-#endif //PRAESIDIO_DEBUG
       return state.satp;
     case CSR_SSCRATCH: return state.sscratch;
     case CSR_MSTATUS: return state.mstatus;
