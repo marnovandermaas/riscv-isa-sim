@@ -263,7 +263,7 @@ Address_t initialize() {
   flushRemappingTable();
   flushL1Cache();
   CoreID_t *enclaveCores = (CoreID_t *) 0x2000 /*ROM location of enclave 0's core ID*/;
-  if(coreID == enclaveCores[0]) { //TODO fill state.enclaveCores
+  if(coreID == enclaveCores[1]) { //TODO fill state.enclaveCores
     switchEnclaveID(ENCLAVE_MANAGEMENT_ID);
 #ifdef PRAESIDIO_DEBUG
     output_string("management.c: In management enclave.\n");
