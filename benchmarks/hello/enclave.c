@@ -1,7 +1,14 @@
+typedef unsigned long uint64_t; //TODO make sure it is 64-bit
 #include <praesidioenclave.h>
 
 int main() {
-  output_string("Hello from enclave.\n");
+  char hello_string[64];
+  hello_string[0] = 'H';
+  hello_string[1] = 'i';
+  hello_string[2] = '!';
+  hello_string[3] = '\n';
+  hello_string[4] = '\0';
+  output_string(hello_string);
   // //This is the code that runs in the enclave world.
   // volatile char *address;
   // char *output;
