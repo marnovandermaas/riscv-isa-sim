@@ -45,7 +45,7 @@ struct EnclaveData_t {
   struct Context_t restorePoint;
 };
 
-struct ManagementState_t {
+struct ManagementState_t { //TODO make the runningEnclaves and enclaveCores variables dynamic and based on device tree value.
   enclave_id_t runningEnclaves[NUMBER_OF_ENCLAVE_CORES]; //Initialize as equal to MANAGEMENT_ENCLAVE_ID
   enclave_id_t nextEnclaveID; //Initialize as 1
   struct PhysCap_t rootCapability; //Initialize with special instruction

@@ -67,7 +67,7 @@ private:
   processor_t* get_core(const std::string& i);
   void step(size_t n); // step through simulation
 #ifdef PRAESIDIO_DEBUG
-  static const size_t INTERLEAVE = 10;
+  static const size_t INTERLEAVE = 10; //TODO investigate why Linux doesn't boot when this is 10 but does boot when it is 5000
 #else
   static const size_t INTERLEAVE = 5000;
 #endif
