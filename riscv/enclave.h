@@ -2,7 +2,7 @@
 #define _RISCV_ENCLAVE_H
 
 #include "decode.h"
-#include "../managementenclave/enclaveLibrary.h"
+#include "../praesidio-software/lib/enclaveLibrary.h"
 
 #define NUM_OF_ENCLAVE_PAGES 3
 

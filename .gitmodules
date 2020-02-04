@@ -4,3 +4,6 @@
 [submodule "xv6-riscv"]
 	path = xv6-riscv
 	url = git@github.com:marnovandermaas/xv6-riscv.git
+[submodule "praesidio-software"]
+	path = praesidio-software
+	url = git@github.com:marnovandermaas/praesidio-software.git
