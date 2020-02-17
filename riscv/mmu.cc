@@ -58,7 +58,7 @@ tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr, enclave_id_t enclave_id)
       return refill_tlb(vaddr, paddr, host_addr, FETCH);
     } else {
 #ifdef PRAESIDIO_DEBUG
-      fprintf(stderr, "mmu.cc: Warning! Denying fetch to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%llx, number of pages %lu, page size 0x%lx\n", enclave_id, vaddr, (uint64_t) host_addr, num_of_pages, PGSIZE);
+      fprintf(stderr, "mmu.cc: Warning! Denying fetch to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", enclave_id, vaddr, (uint64_t) host_addr, num_of_pages, PGSIZE);
 #endif
       throw trap_instruction_access_fault(vaddr);
     }
