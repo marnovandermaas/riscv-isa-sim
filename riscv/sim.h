@@ -67,9 +67,9 @@ private:
   void step(size_t n); // step through simulation
 #ifdef PRAESIDIO_DEBUG
   static const size_t INTERLEAVE = 10;
-#else
+#else //PRAESIDIO_DEBUG
   static const size_t INTERLEAVE = 5000;
-#endif
+#endif //PRAESIDIO_DEBUG
   static const size_t INSNS_PER_RTC_TICK = 100; // 10 MHz clock for 1 BIPS core
   static const size_t CPU_HZ = 1000000000; // 1GHz CPU
   size_t current_step;
