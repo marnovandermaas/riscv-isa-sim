@@ -262,7 +262,7 @@ void sim_t::make_dtb()
   }
 #ifdef PRAESIDIO_DEBUG
   fprintf(stderr, "sim.cc: Adding boot rom with start_pc %016lx\n", start_pc);
-#endif
+#endif //PRAESIDIO_DEBUG
 
   uint32_t reset_vec[reset_vec_size] = {
     0x297,                                      // 0x1000: auipc  t0,0x0

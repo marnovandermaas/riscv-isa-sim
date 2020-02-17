@@ -179,7 +179,12 @@ int main(int argc, char** argv)
 
   option_parser_t parser;
   parser.help(&help);
-  parser.option(0, "enclave", 1, [&](const char* s){nenclaves = atoi(s) + 1;}); //TODO remove the plus one and make sure that the first enclave core is not just reserved for management stuff.
+  parser.option(0, "enclave", 1, [&](const char* s){
+    nenclaves = atoi(s);
+#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
+    nenclaves += 1; //TODO remove the plus one and make sure that the first enclave core is not just reserved for management stuff.i
+#endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
+  });
   parser.option(0, "manage-path", 1, [&](const char* s){strncpy(manage_path, s, 1024);});
   parser.option('h', 0, 0, [&](const char* s){help();});
   parser.option('d', 0, 0, [&](const char* s){debug = true;});
