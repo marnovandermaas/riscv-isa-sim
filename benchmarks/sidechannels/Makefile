@@ -33,6 +33,9 @@ DEFAULTBUILD=primeprobe.out
 dump:
 	$(RV_PREFIX)objdump -D $(DEFAULTBUILD)
 
+run:
+	./runTests.sh $(SUFFIX)
+
 test:
 	spike --l2=128:1:8 -p1 --enclave=1 -m1024 --l2_partitioning=0 -d $(DEFAULTBUILD)
 
