@@ -33,6 +33,7 @@ static void help()
   fprintf(stderr, "  --ic=<S>:<W>:<B>      Instantiate a cache model with S sets,\n");
   fprintf(stderr, "  --dc=<S>:<W>:<B>        W ways, and B-byte blocks (with S and\n");
   fprintf(stderr, "  --l2=<S>:<W>:<B>        B both powers of 2).\n");
+  fprintf(stderr, "  --dram-banks          Instantiate banks with 2^14 rows of 2^13 Bytes\n");
   fprintf(stderr, "  --extension=<name>    Specify RoCC Extension\n");
   fprintf(stderr, "  --enclave=<number>    Number of enclave threads to add [default 0]\n");
   fprintf(stderr, "  --manage-path=<path>  Path to management shim binary [default ../build/management.bin]\n");
@@ -150,6 +151,7 @@ int main(int argc, char** argv)
   const char* dc_string = NULL;
   const char* llc_string = NULL;
   const char* llc_partition_string = NULL;
+  bool enable_banks = false;
   std::unique_ptr<l2cache_sim_t> l2;
   std::unique_ptr<partitioned_cache_sim_t> partitioned_l2;
   std::function<extension_t*()> extension;
@@ -198,6 +200,7 @@ int main(int argc, char** argv)
   parser.option(0, "dc", 1, [&](const char* s){dc_string = s;});
   parser.option(0, "l2", 1, [&](const char* s){llc_string = s;});
   parser.option(0, "l2_partitioning", 1, [&](const char* s){llc_partition_string = s;});
+  parser.option(0, "dram-banks", 0, [&](const char* s){enable_banks = true;});
   parser.option(0, "isa", 1, [&](const char* s){isa = s;});
   parser.option(0, "extension", 1, [&](const char* s){extension = find_extension(s);});
   parser.option(0, "dump-dts", 0, [&](const char *s){dump_dts = true;});
@@ -223,6 +226,13 @@ int main(int argc, char** argv)
   if (!*argv1)
     help();
 
+  if (enable_banks) {
+    if(ic_string != NULL || dc_string != NULL || l2 != NULL || llc_partition_string != NULL) {
+      fprintf(stderr, "spike.cc: ERROR DRAM banks cannot be enabled when other caching is enabled.\n");
+      exit(-1);
+    }
+    //TODO initialize dram banks.
+  }
 
 
   std::unique_ptr<icache_sim_t> ics[nenclaves + 1];
