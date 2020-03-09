@@ -35,9 +35,13 @@ void sim_t::request_halt(uint32_t id)
   for(unsigned int i = 0; i < procs.size(); i++)
   {
     if(!procRequests[i]) {
+#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
       if(i != 1) {//TODO remove this and just exit from the management code.
+#endif
         return;
+#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
       }
+#endif
     }
   }
   fprintf(stdout, "\n>>>>>INSTRUCTION_COUNT<<<<<\n%lu\n", procs[0]->get_csr(CSR_MINSTRET));
