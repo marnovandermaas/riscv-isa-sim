@@ -47,6 +47,17 @@ enclave_id_t getCurrentEnclaveID() {
   return retVal;
 }
 
+int getMissCount() {
+  int retVal;
+  asm volatile (
+    "csrrs %0, 0x415, zero"
+    : "=r"(retVal) //output
+    : //input
+    : //clobbered
+  );
+  return retVal;
+}
+
 void setArgumentEnclaveIdentifier(enclave_id_t id) {
   //Set the enclave ID argument for the next instruction.
   asm volatile (

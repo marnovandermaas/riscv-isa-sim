@@ -9,6 +9,7 @@ void startNormalWorld();
 CoreID_t getCoreID();
 struct PhysCap_t getRootCapability();
 void setManagementInterruptTimer(int milis);
+int getMissCount();
 enclave_id_t getCurrentEnclaveID();
 //This is a helper instruction, but will be removed in final design
 void setArgumentEnclaveIdentifier(enclave_id_t id);
