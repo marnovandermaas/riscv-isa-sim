@@ -373,3 +373,36 @@ uint64_t fa_cache_sim_t::victimize(uint64_t addr)
   tags[addr >> idx_shift] = (addr >> idx_shift) | VALID;
   return old_tag;
 }
+
+dram_bank_t::dram_bank_t(uint64_t address_bits, uint64_t row_bits, uint64_t byte_bits, size_t bank_number)
+{
+  uint64_t bank_bits = address_bits - row_bits - byte_bits;
+  _row_offset = address_bits - row_bits;
+  _row_mask = ((1 << row_bits) - 1) << (_row_offset);
+  _bank_mask = ((1 << bank_bits) - 1) << (byte_bits);
+  _bank_offset = byte_bits;
+  _bank_number = bank_number;
+  _open_row_number = 0;
+  //fprintf(stdout, "cachesim.cc: row offset %lu, row mask 0x%016lx, bank mask 0x%016lx, bank offset %lu, bank bits %lu\n", _row_offset, _row_mask, _bank_mask, _bank_offset, bank_bits);
+}
+
+bool dram_bank_t::interested_in_range(uint64_t begin, uint64_t end, access_type type)
+{
+  uint64_t begin_bank_number = (begin & _bank_mask) >> _bank_offset;
+  uint64_t end_bank_number = (end & _bank_mask) >> _bank_offset;
+  return ((type != FETCH) && ((begin_bank_number == _bank_number) || (end_bank_number == _bank_number)));
+}
+
+trace_result dram_bank_t::trace(uint64_t addr, size_t bytes, access_type type)
+{
+  uint64_t row_number = (addr & _row_mask) >> _row_offset;
+  if(row_number == _open_row_number)
+  {
+    return LLC_HIT;
+  }
+  else
+  {
+    _open_row_number = row_number; //update open row number
+    return LLC_MISS;
+  }
+}
