@@ -5,9 +5,8 @@ OUTPUT_ARCH( "riscv" )
  * Unfortunately this means we must hardcode the size of memory.
  * Here we choose 64K. Change this value to change the working memory size.
  */
-/*__mem should be set to the beginning of the memory as specified by the device tree, for spike run: "spike --dump-dts a.out"*/
 __mem   = 0x80000000;
-__emem  = 0x80004000;
+__emem  = 0x80020000; /* This is row 1 in bank 0 assuming 2^13 Bytes in a row, 2^14 rows in a bank, 2^31 Bytes in memory and addresses in form row:bank:Byte*/
 
 SECTIONS
 {

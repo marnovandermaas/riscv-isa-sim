@@ -255,7 +255,10 @@ int main(int argc, char** argv)
   if (!*argv1)
     help();
 
+  reg_t sender_base = 0x80004000;
+#ifdef COVERT_CHANNEL_POC
   if (enable_banks) {
+    sender_base = 0x80020000;
     if(ic_string != NULL || dc_string != NULL || l2 != NULL || llc_partition_string != NULL) {
       fprintf(stderr, "spike.cc: ERROR DRAM banks cannot be enabled when other caching is enabled.\n");
       exit(-1);
@@ -282,6 +285,7 @@ int main(int argc, char** argv)
     fprintf(stdout, "spike.cc: dram_size %lu is equal to 2^%lu\n", dram_size, address_bits);
     dram_bank.reset(new dram_bank_t(address_bits, 14, 13, 0));
   }
+#endif
 
 
   std::unique_ptr<icache_sim_t> ics[nenclaves + 1];
@@ -373,7 +377,7 @@ int main(int argc, char** argv)
 
   sim_t s(isa, nprocs + nenclaves, nenclaves, halted, start_pc, mems, htif_args, std::move(hartids),
       progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2, rmts_arg,
-      static_llc_arg, mailboxes, num_of_mailboxes, num_of_pages);
+      static_llc_arg, mailboxes, num_of_mailboxes, num_of_pages, sender_base);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(new jtag_dtm_t(&s.debug_module));
   if (use_rbb) {

@@ -93,11 +93,12 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
              std::vector<std::pair<reg_t, mem_t*>> mems,
              const std::vector<std::string>& args,
              std::vector<int> const hartids, unsigned progsize,
-             unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, l2cache_sim_t *l2, l2cache_sim_t **rmts, l2cache_sim_t **static_llc, struct Message_t *mailboxes, size_t num_of_mailboxes, reg_t num_of_pages)
+             unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, l2cache_sim_t *l2, l2cache_sim_t **rmts, l2cache_sim_t **static_llc, struct Message_t *mailboxes, size_t num_of_mailboxes, reg_t num_of_pages, reg_t sender_base)
   : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), nenclaves(nenclaves),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
-    debug_module(this, progsize, max_bus_master_bits, require_authentication), ics(ics), dcs(dcs), l2(l2), rmts(rmts), static_llc(static_llc)
+    debug_module(this, progsize, max_bus_master_bits, require_authentication),
+    ics(ics), dcs(dcs), l2(l2), rmts(rmts), static_llc(static_llc), sender_base(sender_base)
 {
   signal(SIGINT, &handle_signal);
 #ifdef PRAESIDIO_DEBUG
@@ -257,9 +258,9 @@ void sim_t::make_dtb()
 //TODO define new reset vec that jumps to __reader   = 0x80000000; and __sender   = 0x80004000;
   const int reset_vec_size = 12;
   reg_t reader_pc = 0x80000000;
-  reg_t sender_pc = 0x80004000;
+  reg_t sender_pc = sender_base;
   reg_t start_pc = get_entry_point();
-  
+
   uint32_t reset_vec[reset_vec_size] = {
     0x00000297,                                 // auipc  t0,0x0
     0x00028593 + (reset_vec_size * 4 << 20),    // addi   a1, t0, &dtb
@@ -354,7 +355,8 @@ void sim_t::reset()
     make_dtb();
 
 #ifdef COVERT_CHANNEL_POC
-  page_owners[4].owner = 1; //This is so that I don't need a management enclave for the covert channel case.
+  page_owners[4].owner = 1; //This page is used for prime and probe covert channel
+  page_owners[32].owner = 1; //This page is used for DRAM covert channel
 #endif //COVERT_CHANNEL_POC
 }
 
