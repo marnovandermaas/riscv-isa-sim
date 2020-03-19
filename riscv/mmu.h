@@ -221,9 +221,9 @@ public:
     if (auto host_addr = sim->addr_to_mem(paddr))
       load_reservation_address = refill_tlb(vaddr, paddr, host_addr, LOAD).target_offset + vaddr;
     else {
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
       fprintf(stderr, "mmu.h: throwing load access fault for address 0x%016lx\n", vaddr);
-#endif //PRAESIDIO_DEBUG
+#endif //MARNO_DEBUG
       throw trap_load_access_fault(vaddr); // disallow LR to I/O space
     }
   }

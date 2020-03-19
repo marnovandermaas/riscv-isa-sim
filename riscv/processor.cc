@@ -454,7 +454,7 @@ void processor_t::set_csr(int which, reg_t val)
       if (max_xlen == 32)
         state.satp = val & (SATP32_PPN | SATP32_MODE);
 
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
       if (max_xlen == 64 && get_field(val, SATP64_MODE) != SATP_MODE_SV39 )
 
         {
@@ -470,7 +470,7 @@ void processor_t::set_csr(int which, reg_t val)
                              get_field(val, SATP64_MODE) == SATP_MODE_SV39 ||
                              get_field(val, SATP64_MODE) == SATP_MODE_SV48)) {
         state.satp = val & (SATP64_PPN | SATP64_MODE);
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
         printf("processor.cc: setting satp to 0x%lx\n",state.satp);
 #endif
       }
@@ -591,14 +591,14 @@ void processor_t::set_csr(int which, reg_t val)
       //This instruction should only succeed if the pc is in within the management enclave.
       if ((state.pc >= MANAGEMENT_ENCLAVE_BASE) && (state.pc < MANAGEMENT_ENCLAVE_BASE + MANAGEMENT_ENCLAVE_SIZE))
       {
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
         fprintf(stderr, "processor.cc: Enclave ID on core %u changed to 0x%lx\n", id, val);
-#endif //PRAESIDIO_DEBUG
+#endif //MARNO_DEBUG
         enclave_id = val;
       } else {
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
         fprintf(stderr, "processor.cc: WARNING: pc was not in management enclave code 0x%lx", state.pc);
-#endif //PRAESIDIO_DEBUG
+#endif //MARNO_DEBUG
       }
       break;
     case CSR_MANAGECHANGEPAGETAG:
@@ -607,15 +607,15 @@ void processor_t::set_csr(int which, reg_t val)
       if(enclave_id == ENCLAVE_MANAGEMENT_ID) {
         if(val & DRAM_BASE) {
           int index = (val & (DRAM_BASE - 1)) / PGSIZE; //Assume DRAM_BASE is just one set bit.
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
           fprintf(stderr, "processor.cc: Changing page %d to tag: %lu\n", index, state.arg_enclave_id);
-#endif //PRAESIDIO_DEBUG
+#endif //MARNO_DEBUG
           page_owners[index].owner = state.arg_enclave_id;
         } else {
           //TODO enable tagging for pages in boot ROM and management pages.
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
           fprintf(stderr, "processor.cc: WARNING: Currently tagging pages outside of DRAM is not supported 0x%lx\n", val);
-#endif //PRAESIDIO_DEBUG
+#endif //MARNO_DEBUG
         }
       }
       break;
@@ -623,17 +623,17 @@ void processor_t::set_csr(int which, reg_t val)
       mailbox->source = enclave_id;
       mailbox->destination = state.arg_enclave_id;
       mailbox->content = val;
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
       fprintf(stderr, "processor.cc: core %u sending mailbox message: source 0x%016lx, destination 0x%016lx, content 0x%016lx\n", id, mailbox->source, mailbox->destination, mailbox->content);
-#endif //PRAESIDIO_DEBUG
+#endif //MARNO_DEBUG
       break;
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
 #ifdef COVERT_CHANNEL_POC
     case CSR_LLCMISSCOUNT:
       state.llc_miss_count++;
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
       fprintf(stderr, "processor.cc: setting lcc_miss_count to: 0x%lx\n", state.llc_miss_count);
-#endif //PRAESIDIO_DEBUG
+#endif //MARNO_DEBUG
       break;
 #endif //COVERT_CHANNEL_POC
   }
@@ -704,9 +704,9 @@ reg_t processor_t::get_csr(int which)
     for(size_t i = 0; i < num_of_mailboxes; i++) { //This should be done in parallel in hardware
       struct Message_t *message = &allMailboxes[i];
       if(message->destination == enclave_id) {
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
         fprintf(stderr, "processor.cc: core %u at pc 0x%016lx found messages in box %lu, with message: source 0x%016lx, destination 0x%016lx, content 0x%016lx\n", id, state.pc, i, message->source, message->destination, message->content);
-#endif //PRAESIDIO_DEBUG
+#endif //MARNO_DEBUG
         state.arg_enclave_id = message->source; //TODO this is a security problem.
         message->destination = ENCLAVE_INVALID_ID;
         message->source = ENCLAVE_INVALID_ID;
@@ -782,9 +782,9 @@ reg_t processor_t::get_csr(int which)
     case CSR_SATP:
       if (get_field(state.mstatus, MSTATUS_TVM))
         require_privilege(PRV_M);
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
       printf("processor.cc: reading satp 0x%lx\n",state.satp);
-#endif //PRAESIDIO_DEBUG
+#endif //MARNO_DEBUG
       return state.satp;
     case CSR_SSCRATCH: return state.sscratch;
     case CSR_MSTATUS: return state.mstatus;

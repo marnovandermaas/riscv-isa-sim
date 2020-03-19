@@ -46,7 +46,7 @@ void sim_t::request_halt(uint32_t id)
   }
   fprintf(stdout, "\n>>>>>INSTRUCTION_COUNT<<<<<\n%lu\n", procs[0]->get_csr(CSR_MINSTRET));
   bool csv_style = true;
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
   csv_style = false;
 #endif
   while(true) {
@@ -101,7 +101,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
     ics(ics), dcs(dcs), l2(l2), rmts(rmts), static_llc(static_llc), sender_base(sender_base)
 {
   signal(SIGINT, &handle_signal);
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
   fprintf(stderr, "sim.cc: Constructing simulator with %lu processors and %lu enclaves.\n", nprocs, nenclaves);
 #endif
 
@@ -182,7 +182,7 @@ int sim_t::run()
 {
   host = context_t::current();
   target.init(sim_thread_main, this);
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
   fprintf(stderr, "sim.cc: running htif.\n");
 #endif
   return htif_t::run();
@@ -292,9 +292,9 @@ void sim_t::make_dtb()
     }
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
   }
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
   fprintf(stderr, "sim.cc: Adding boot rom with start_pc %016lx\n", start_pc);
-#endif //PRAESIDIO_DEBUG
+#endif //MARNO_DEBUG
 
   uint32_t reset_vec[reset_vec_size + nenclaves + 1] = {
     0x297,                                      // auipc  t0,0x0
@@ -315,12 +315,12 @@ void sim_t::make_dtb()
     reset_vec[i + 1 + reset_vec_size] = procs.size() - nenclaves + i; //This statement assumes all ids are from 0..procs.size()-1
   }
 
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
   fprintf(stderr, "sim.cc: reset vector contents.\n");
   for(size_t i = 0; i < reset_vec_size + nenclaves + 1; i++) {
     fprintf(stderr, "sim.cc: 0x%08x,\n", reset_vec[i]);
   }
-#endif //PRAESIDIO_DEBUG
+#endif //MARNO_DEBUG
 #endif //COVERT_CHANNEL_POC
 
   std::vector<char> rom((char*)reset_vec, (char*)reset_vec + sizeof(reset_vec));

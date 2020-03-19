@@ -75,7 +75,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
       num_mems = 2;
     }
 #endif
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
     fprintf(stderr, "spike.cc: creating vector with %d elements.\n", num_mems);
 #endif
     std::vector<std::pair<reg_t, mem_t*>> memory_vector = std::vector<std::pair<reg_t, mem_t*>>(num_mems, std::make_pair(reg_t(0), (mem_t *) NULL));
@@ -96,7 +96,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
         file_status = fread(&management_array[i], sizeof(char), 1, management_file);
         //fprintf(stderr, "%02x ", management_array[i] & 0xFF); //Need to &0xFF because otherwise C will sign extend values.
         if (file_status != 1) {
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
           fprintf(stderr, "spike.cc: read management binary with %lu amount of Bytes, ferror: %d, feof: %d\n", i, ferror(management_file), feof(management_file));
 #endif
           if(ferror(management_file) || !feof(management_file))
@@ -114,9 +114,9 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
       free(management_array);
     }
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
     fprintf(stderr, "spike.cc: making working memory at base: 0x%0x\n", DRAM_BASE);
-#endif //PRAESIDIO_DEBUG
+#endif //MARNO_DEBUG
     memory_vector[0] = std::make_pair(reg_t(DRAM_BASE), new mem_t(size));
     return memory_vector;
   }
@@ -312,7 +312,7 @@ int main(int argc, char** argv)
           l2.reset(new l2cache_sim_t(llc_string, "L2$"));
         } else if(atoi(llc_partition_string) == CACHE_PARTITIONING_RMT) {
           cache_partitioning_type = CACHE_PARTITIONING_RMT;
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
           fprintf(stderr, "spike.cc: Initializing partitioned cache.\n");
 #endif
           cache_sim_t::parse_config_string(llc_string, &sets, &ways, &linesz);
@@ -457,7 +457,7 @@ int main(int argc, char** argv)
   s.set_debug(debug);
   s.set_log(log);
   s.set_histogram(histogram);
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
   fprintf(stderr, "spike.cc: starting simulation.\n");
 #endif
   return s.run();

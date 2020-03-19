@@ -84,7 +84,7 @@ int createEnclave() {
       break;
     }
   }
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
   output_string("creating enclave in slot: ");
   output_char(i + '0');
   output_string(" with ID: ");
@@ -103,7 +103,7 @@ enum boolean donatePage(enclave_id_t recipient, Address_t page_base) {
   int i;
   for(i = 0; ; i++) {
     if(i >= 2*PAGE_SIZE / sizeof(struct EnclaveData_t)) {
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
       output_string("Donate Page: enclaveID ERROR!\n");
 #endif
       return BOOL_FALSE;
@@ -113,7 +113,7 @@ enum boolean donatePage(enclave_id_t recipient, Address_t page_base) {
     }
   }
   if(page_base & (PAGE_SIZE-1)) {
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
     output_string("Donate Page: address not at base of page ERROR!\n");
 #endif
     return BOOL_FALSE;
@@ -128,7 +128,7 @@ enum boolean donatePage(enclave_id_t recipient, Address_t page_base) {
       putPageEntry(page_base, recipient);
       break;
     case STATE_FINALIZED:
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
       output_string("Donate Page: enclave already running ERROR!\n");
 #endif
       return BOOL_FALSE;
@@ -164,7 +164,7 @@ Address_t waitForEnclave() {
       int i;
       for(i = 0; ; i++) {
         if(i >= 2*PAGE_SIZE / sizeof(struct EnclaveData_t)) {
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
           output_string("waitForEnclave: ERROR enclave entry point not found!\n");
 #endif
           return 0;
@@ -207,7 +207,7 @@ void managementRoutine() {
     //output_string(prntString);
     switch(message.type) {
       case MSG_CREATE_ENCLAVE:
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
         output_string("Received create enclave message.\n");
 #endif
         index = createEnclave();
@@ -219,7 +219,7 @@ void managementRoutine() {
         }
         break;
       case MSG_DELETE_ENCLAVE:
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
         output_string("Received delete enclave message.\n");
 #endif
         break;
@@ -228,19 +228,19 @@ void managementRoutine() {
       case MSG_ACQUIRE_PHYS_CAP: //Not needed yet.
         break;
       case MSG_DONATE_PAGE:
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
         output_string("Received donate page enclave message.\n");
 #endif
         donatePage(internalArgument, message.content);
         break;
       case MSG_SWITCH_ENCLAVE:
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
         output_string("Received switch enclave message.\n");
 #endif
         switchEnclave(nextIdleCore++, message.content);
         break;
       case MSG_SET_ARGUMENT: //TODO include this in the donate page message.
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
         output_string("Received set argument message.\n");
         output_string("internalArgument set to: ");
         output_char(message.content + '0');
@@ -262,7 +262,7 @@ Address_t initialize() {
   CoreID_t *enclaveCores = (CoreID_t *) 0x1024 /*ROM location of enclave 0's core ID*/;
   if(coreID == enclaveCores[0]) { //TODO fill state.enclaveCores
     switchEnclaveID(ENCLAVE_MANAGEMENT_ID);
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
     output_string("management.c: In management enclave.\n");
 #endif
     state.nextEnclaveID = 1;
@@ -276,7 +276,7 @@ Address_t initialize() {
     fillPage(ENCLAVE_DATA_BASE_ADDRESS, 0x0000000000000000); //Fill the second page as well.
     struct EnclaveData_t *enclaveDataPointer = (struct EnclaveData_t *) ENCLAVE_DATA_BASE_ADDRESS;
     for(int i = 0; i < 2*PAGE_SIZE / sizeof(struct EnclaveData_t); i++) {
-#ifdef PRAESIDIO_DEBUG
+#ifdef MARNO_DEBUG
       output_string("management.c: clearing enclave data\n");
 #endif
       enclaveDataPointer[i].eID = ENCLAVE_INVALID_ID;
