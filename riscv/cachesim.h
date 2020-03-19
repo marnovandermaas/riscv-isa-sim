@@ -157,10 +157,10 @@ class cache_memtracer_t : public memtracer_t
   cache_sim_t* cache;
 };
 
-class dram_buffer_t : public memtracer_t
+class dram_bank_t : public memtracer_t
 {
 public:
-  dram_buffer_t(uint64_t address_bits, uint64_t row_bits, uint64_t byte_bits, size_t bank_number)
+  dram_bank_t(uint64_t address_bits, uint64_t row_bits, uint64_t byte_bits, size_t bank_number)
   {
     uint64_t bank_bits = address_bits - row_bits - byte_bits;
     _row_offset = address_bits - row_bits;
@@ -170,7 +170,7 @@ public:
     _bank_number = bank_number;
     _open_row_number = 0;
   }
-  ~dram_buffer_t() {}
+  ~dram_bank_t() {}
 
   bool interested_in_range(uint64_t begin, uint64_t end, access_type type)
   {

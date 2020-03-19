@@ -48,7 +48,7 @@ static void help()
   exit(1);
 }
 
-static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *num_of_pages, size_t num_enclaves, const char* management_path)
+static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *num_of_pages, size_t num_enclaves, const char* management_path, reg_t* dram_size)
 {
   // handle legacy mem argument
   char* p;
@@ -57,6 +57,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
     reg_t size = reg_t(mb) << 20;
     if (size != (size_t)size)
       throw std::runtime_error("Size would overflow size_t");
+    *dram_size = size;
     *num_of_pages = size / PGSIZE;
     if ((size % PGSIZE) != 0) *num_of_pages++;
     int num_mems = 1;
@@ -152,6 +153,8 @@ int main(int argc, char** argv)
   const char* llc_string = NULL;
   const char* llc_partition_string = NULL;
   bool enable_banks = false;
+  std::unique_ptr<dram_bank_t> dram_bank;
+  reg_t dram_size = 0;
   std::unique_ptr<l2cache_sim_t> l2;
   std::unique_ptr<partitioned_cache_sim_t> partitioned_l2;
   std::function<extension_t*()> extension;
@@ -190,7 +193,7 @@ int main(int argc, char** argv)
   parser.option('g', 0, 0, [&](const char* s){histogram = true;});
   parser.option('l', 0, 0, [&](const char* s){log = true;});
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
-  parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s, &num_of_pages, nenclaves, manage_path);});
+  parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s, &num_of_pages, nenclaves, manage_path, &dram_size);});
   // I wanted to use --halted, but for some reason that doesn't work.
   parser.option('H', 0, 0, [&](const char* s){halted = true;});
   parser.option(0, "rbb-port", 1, [&](const char* s){use_rbb = true; rbb_port = atoi(s);});
@@ -221,7 +224,7 @@ int main(int argc, char** argv)
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
   if (mems.empty())
-    mems = make_mems("2048", &num_of_pages, nenclaves, manage_path);
+    mems = make_mems("2048", &num_of_pages, nenclaves, manage_path, &dram_size);
 
   if (!*argv1)
     help();
@@ -231,7 +234,27 @@ int main(int argc, char** argv)
       fprintf(stderr, "spike.cc: ERROR DRAM banks cannot be enabled when other caching is enabled.\n");
       exit(-1);
     }
-    //TODO initialize dram banks.
+    if(dram_size == 0) {
+      throw std::runtime_error("DRAM cannot be size 0\n");
+    }
+    //Test is dram_size is power of 2
+    if((dram_size & (dram_size - 1)) != 0) {
+      throw std::runtime_error("DRAM needs to be power of 2 if you enable banks\n");
+    }
+    //Find log2(dram_size)
+    int num_bits = sizeof(reg_t)*8;
+    reg_t mask = 1;
+    uint64_t address_bits = 0;
+    while ((num_bits /= 2) != 0) {
+      mask <<= num_bits;
+      if(mask > dram_size) {
+        mask >>= num_bits;
+      } else {
+        address_bits += num_bits;
+      }
+    }
+    fprintf(stdout, "spike.cc: dram_size %lu is equal to 2^%lu\n", dram_size, address_bits);
+    dram_bank.reset(new dram_bank_t(address_bits, 14, 13, 0));
   }
 
 
