@@ -421,6 +421,9 @@ int main(int argc, char** argv)
     if (dc_string) {
       s.get_core(i)->get_mmu()->register_memtracer(&*dcs[0]);
     } //l2 is already attached by ic logic if necessary
+    if (enable_banks) {
+      s.get_core(i)->get_mmu()->register_memtracer(&*dram_bank);
+    }
     if (extension) s.get_core(i)->register_extension(extension());
   }
 
@@ -445,6 +448,9 @@ int main(int argc, char** argv)
       s.get_core(core_id)->get_mmu()->register_memtracer(&*dcs[i+1]);
       dcs[i+1]->set_miss_handler(l2_cachesim);
     } //l2 is already attached by ic logic if necessary
+    if(enable_banks) {
+      s.get_core(core_id)->get_mmu()->register_memtracer(&*dram_bank);
+    }
     if (extension) s.get_core(core_id)->register_extension(extension());
   }
 
