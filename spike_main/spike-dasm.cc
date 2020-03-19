@@ -25,8 +25,8 @@ int main(int argc, char** argv)
   parser.option(0, "isa", 1, [&](const char* s){isa = s;});
   parser.parse(argv);
 
-  //processor_t(const char* isa, simif_t* sim, uint32_t id, enclave_id_t e_id, page_owner_t *page_owners, size_t num_of_pages, struct Message_t *message, struct Message_t *allMessages, size_t num_of_messages, bool halt_on_reset=false);
-  processor_t p(isa, NULL, 0, 0, NULL, 0, NULL, NULL, 0);
+  //processor_t(const char* isa, simif_t* sim, uint32_t id, enclave_id_t e_id, page_owner_t *page_owners, size_t num_of_pages, bool halt_on_reset=false);
+  processor_t p(isa, NULL, 0, 0, NULL, 0);
   if (extension)
   {
     p.register_extension(extension());

@@ -125,9 +125,6 @@ struct state_t
   reg_t tdata2[num_triggers];
 
   //Register to contain the identifier for enclave page communication system type instructions
-#ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-  reg_t arg_enclave_id;
-#endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
 #ifdef COVERT_CHANNEL_POC
   reg_t llc_miss_count;
 #endif //COVERT_CHANNEL_POC
@@ -171,7 +168,7 @@ static int cto(reg_t val)
 class processor_t : public abstract_device_t
 {
 public:
-  processor_t(const char* isa, simif_t* sim, uint32_t id, enclave_id_t e_id, page_owner_t *page_owners, size_t num_of_pages, struct Message_t *message, struct Message_t *allMessages, size_t num_of_messages, bool halt_on_reset=false);
+  processor_t(const char* isa, simif_t* sim, uint32_t id, enclave_id_t e_id, page_owner_t *page_owners, size_t num_of_pages, bool halt_on_reset=false);
   ~processor_t();
 
   enclave_id_t get_enclave_id() {return enclave_id;};
@@ -321,10 +318,6 @@ private:
 
   page_owner_t *page_owners;
   size_t num_of_pages;
-
-  struct Message_t *mailbox;
-  struct Message_t *allMailboxes;
-  size_t num_of_mailboxes;
 
   bool halt_on_reset;
   enclave_id_t enclave_id;

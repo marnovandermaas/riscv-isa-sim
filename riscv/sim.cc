@@ -35,13 +35,7 @@ void sim_t::request_halt(uint32_t id)
   for(unsigned int i = 0; i < procs.size(); i++)
   {
     if(!procRequests[i]) {
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-      if(i != 1) {//TODO remove this and just exit from the management code.
-#endif
-        return;
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-      }
-#endif
+      return;
     }
   }
   fprintf(stdout, "\n>>>>>INSTRUCTION_COUNT<<<<<\n%lu\n", procs[0]->get_csr(CSR_MINSTRET));
@@ -93,7 +87,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
              std::vector<std::pair<reg_t, mem_t*>> mems,
              const std::vector<std::string>& args,
              std::vector<int> const hartids, unsigned progsize,
-             unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, l2cache_sim_t *l2, l2cache_sim_t **rmts, l2cache_sim_t **static_llc, struct Message_t *mailboxes, size_t num_of_mailboxes, reg_t num_of_pages, reg_t sender_base)
+             unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, l2cache_sim_t *l2, l2cache_sim_t **rmts, l2cache_sim_t **static_llc, reg_t num_of_pages, reg_t sender_base)
   : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), nenclaves(nenclaves),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
@@ -120,15 +114,15 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
   debug_mmu = new mmu_t(this, NULL, page_owners, num_of_pages);
 
   if (hartids.size() == 0)
-  { //TODO add the mailbox slots to the processor_t constructor.
+  {
     for (size_t i = 0; i < procs.size() - nenclaves; i++)
     {
-      procs[i] = new processor_t(isa, this, i, ENCLAVE_DEFAULT_ID, page_owners, num_of_pages, &mailboxes[0], mailboxes, num_of_mailboxes, halted);
+      procs[i] = new processor_t(isa, this, i, ENCLAVE_DEFAULT_ID, page_owners, num_of_pages, halted);
     }
     enclave_id_t current_id = 1;
     for (size_t i = procs.size() - nenclaves; i < procs.size(); i++)
     {
-      procs[i] = new processor_t(isa, this, i, current_id, page_owners, num_of_pages, &mailboxes[current_id], mailboxes, num_of_mailboxes, halted);
+      procs[i] = new processor_t(isa, this, i, current_id, page_owners, num_of_pages, halted);
       current_id += 1;
     }
   }
@@ -139,10 +133,6 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
       std::cerr << "Number of specified hartids doesn't match number of processors or you specified both hardids and enclaves" << strerror(errno) << std::endl;
       exit(1);
     }
-    //for (size_t i = 0; i < procs.size(); i++)
-    //{
-    //  procs[i] = new processor_t(isa, this, ENCLAVE_DEFAULT_ID, hartids[i], page_owners, num_of_pages, &mailboxes[0], num_of_mailboxes, halted);
-    //}
   }
 
   clint.reset(new clint_t(procs));
@@ -285,12 +275,6 @@ void sim_t::make_dtb()
   const int reset_vec_size = 8;
   if(start_pc == reg_t(-1)) {
     start_pc = get_entry_point(); //This is the get_entry_point function of htif_t found in riscv fesvr
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-    //TODO add the entry point to the management enclave code instead of hardcoding it.
-    if(nenclaves > 0) {
-      start_pc = MANAGEMENT_ENCLAVE_BASE;
-    }
-#endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
   }
 #ifdef MARNO_DEBUG
   fprintf(stderr, "sim.cc: Adding boot rom with start_pc %016lx\n", start_pc);

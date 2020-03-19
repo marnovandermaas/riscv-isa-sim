@@ -38,9 +38,6 @@ static void help()
 #endif
   fprintf(stderr, "  --extension=<name>    Specify RoCC Extension\n");
   fprintf(stderr, "  --enclave=<number>    Number of enclave threads to add [default 0]\n");
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-  fprintf(stderr, "  --manage-path=<path>  Path to management shim binary [default ../build/management.bin]\n");
-#endif
   fprintf(stderr, "  --extlib=<name>       Shared library to load\n");
   fprintf(stderr, "  --rbb-port=<port>     Listen on <port> for remote bitbang connection\n");
   fprintf(stderr, "  --dump-dts            Print device tree string and exit\n");
@@ -52,11 +49,7 @@ static void help()
   exit(1);
 }
 
-static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *num_of_pages, size_t num_enclaves,
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-  const char* management_path,
-#endif
-  reg_t* dram_size)
+static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *num_of_pages, size_t num_enclaves, reg_t* dram_size)
 {
   // handle legacy mem argument
   char* p;
@@ -70,50 +63,11 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
     if ((size % PGSIZE) != 0) *num_of_pages++;
     int num_mems = 1;
 
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-    if (num_enclaves > 0) {
-      num_mems = 2;
-    }
-#endif
 #ifdef MARNO_DEBUG
     fprintf(stderr, "spike.cc: creating vector with %d elements.\n", num_mems);
 #endif
     std::vector<std::pair<reg_t, mem_t*>> memory_vector = std::vector<std::pair<reg_t, mem_t*>>(num_mems, std::make_pair(reg_t(0), (mem_t *) NULL));
 
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-    if (num_enclaves > 0) {
-      //This initializes the memory enclave memory device (4 pages in size for now)
-      FILE *management_file;
-      management_file = fopen(management_path, "rb");
-      if(management_file == NULL) {
-        fprintf(stderr, "spike.cc: ERROR could not open management file.\n");
-        exit(-1);
-      }
-      size_t file_size = PGSIZE;
-      char *management_array = (char *) calloc(file_size, sizeof(char));
-      size_t file_status;
-      for(size_t i = 0; i < PGSIZE; i++) {
-        file_status = fread(&management_array[i], sizeof(char), 1, management_file);
-        //fprintf(stderr, "%02x ", management_array[i] & 0xFF); //Need to &0xFF because otherwise C will sign extend values.
-        if (file_status != 1) {
-#ifdef MARNO_DEBUG
-          fprintf(stderr, "spike.cc: read management binary with %lu amount of Bytes, ferror: %d, feof: %d\n", i, ferror(management_file), feof(management_file));
-#endif
-          if(ferror(management_file) || !feof(management_file))
-          {
-            fprintf(stderr, "spike.cc: ERROR in reading file.\n");
-            exit(-1);
-          }
-          break;
-        }
-      }
-      //TODO make these extra pages be local per processor.
-      size_t management_memory_size = MANAGEMENT_ENCLAVE_SIZE + PGSIZE*num_enclaves; //We need to add extra pages for the stacks of the management code.
-      //fprintf(stderr, "spike.cc: size 0x%lx, original size 0x%x, num enclaves 0x%lx at base: 0x%lx\n", management_memory_size, MANAGEMENT_ENCLAVE_SIZE, num_enclaves, MANAGEMENT_ENCLAVE_BASE);
-      memory_vector[1] = std::make_pair(reg_t(MANAGEMENT_ENCLAVE_BASE), new mem_t(management_memory_size, file_size, management_array));
-      free(management_array);
-    }
-#endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
 #ifdef MARNO_DEBUG
     fprintf(stderr, "spike.cc: making working memory at base: 0x%0x\n", DRAM_BASE);
 #endif //MARNO_DEBUG
@@ -153,9 +107,6 @@ int main(int argc, char** argv)
   bool dtb_enabled = true;
   size_t nprocs = 1;
   size_t nenclaves = 0;
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-  char manage_path[1024] = "../build/management.bin";
-#endif
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
   const char* ic_string = NULL;
@@ -195,24 +146,14 @@ int main(int argc, char** argv)
   parser.help(&help);
   parser.option(0, "enclave", 1, [&](const char* s){
     nenclaves = atoi(s);
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-    nenclaves += 1; //TODO remove the plus one and make sure that the first enclave core is not just reserved for management stuff.
-#endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
   });
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-  parser.option(0, "manage-path", 1, [&](const char* s){strncpy(manage_path, s, 1024);});
-#endif
   parser.option('h', 0, 0, [&](const char* s){help();});
   parser.option('d', 0, 0, [&](const char* s){debug = true;});
   parser.option('g', 0, 0, [&](const char* s){histogram = true;});
   parser.option('l', 0, 0, [&](const char* s){log = true;});
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
   parser.option('m', 0, 1, [&](const char* s){
-    mems = make_mems(s, &num_of_pages, nenclaves,
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-      manage_path,
-#endif
-      &dram_size);
+    mems = make_mems(s, &num_of_pages, nenclaves, &dram_size);
   });
   // I wanted to use --halted, but for some reason that doesn't work.
   parser.option('H', 0, 0, [&](const char* s){halted = true;});
@@ -246,11 +187,7 @@ int main(int argc, char** argv)
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
   if (mems.empty())
-    mems = make_mems("2048", &num_of_pages, nenclaves,
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-      manage_path,
-#endif
-      &dram_size);
+    mems = make_mems("2048", &num_of_pages, nenclaves, &dram_size);
 
   if (!*argv1)
     help();
@@ -354,8 +291,8 @@ int main(int argc, char** argv)
       rmts_arg[i] = NULL;
     }
     if ( llc_string != NULL && cache_partitioning_type == CACHE_PARTITIONING_STATIC) {
-      if(nenclaves != 2) {
-        fprintf(stderr, "spike.cc: ERROR static partitioning currently only supported for 1 enclave.\n"); //1 enclave because currently there is a dedicated enclave for management code.
+      if(nenclaves != 1) {
+        fprintf(stderr, "spike.cc: ERROR static partitioning currently only supported for 1 enclave.\n");
         exit(-1);
       }
       l2cache_sim_t *static_partition = new l2cache_sim_t(i == 0 ? sets / 2 : sets / 4, ways, linesz, "SPLLC");
@@ -366,18 +303,9 @@ int main(int argc, char** argv)
     }
   }
 
-
-  size_t num_of_mailboxes = nenclaves + 1;
-  struct Message_t mailboxes[num_of_mailboxes]; //One mailbox per enclave including one for the normal world
-  for(size_t i = 0; i < num_of_mailboxes; i++) {
-    mailboxes[i].source = ENCLAVE_INVALID_ID;
-    mailboxes[i].destination = ENCLAVE_INVALID_ID;
-    mailboxes[i].content = 0;
-  }
-
   sim_t s(isa, nprocs + nenclaves, nenclaves, halted, start_pc, mems, htif_args, std::move(hartids),
       progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2, rmts_arg,
-      static_llc_arg, mailboxes, num_of_mailboxes, num_of_pages, sender_base);
+      static_llc_arg, num_of_pages, sender_base);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(new jtag_dtm_t(&s.debug_module));
   if (use_rbb) {

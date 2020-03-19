@@ -2,15 +2,9 @@
 #define _RISCV_ENCLAVE_H
 
 #include "decode.h"
-#include "../managementenclave/enclaveLibrary.h"
-
-#define NUM_OF_ENCLAVE_PAGES 3
-
-struct Message_t {
-  enclave_id_t source;
-  enclave_id_t destination;
-  reg_t content; //Assuming that a reg_t can fit an Address_t
-};
+typedef uint64_t enclave_id_t;
+#define ENCLAVE_DEFAULT_ID    (0)
+#define ENCLAVE_INVALID_ID    (0xFFFFFFFFFFFFFFFF)
 
 struct page_owner_t
 {

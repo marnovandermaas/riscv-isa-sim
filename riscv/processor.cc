@@ -21,14 +21,11 @@
 #define STATE state
 
 processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
-        enclave_id_t e_id, page_owner_t *page_owners, size_t num_of_pages, struct Message_t *message, struct Message_t *allMessages, size_t num_of_messages, bool halt_on_reset)
+        enclave_id_t e_id, page_owner_t *page_owners, size_t num_of_pages, bool halt_on_reset)
   : debug(false), halt_request(false), sim(sim), ext(NULL), id(id), page_owners(page_owners), num_of_pages(num_of_pages),
   halt_on_reset(halt_on_reset), last_pc(1), executions(1)
 {
   enclave_id = e_id;
-  mailbox = message;
-  allMailboxes = allMessages;
-  num_of_mailboxes = num_of_messages;
   parse_isa_string(isa);
   register_base_instructions();
 
@@ -570,64 +567,7 @@ void processor_t::set_csr(int which, reg_t val)
       sim->request_halt(id);//exit(0);
       break;
 #endif //BARE_METAL_OUTPUT_CSR
-#ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-    case CSR_ENCLAVEASSIGNREADER:
-      //least significant 16-bits are the enclave ID the rest is page number.
-      if(enclave_id == page_owners[val].owner) {//TODO check if val is not out of bounds
-        page_owners[val].reader = state.arg_enclave_id;
-      }
-      break;
-    case CSR_ENCLAVEDONATEPAGE:
-      if(enclave_id == page_owners[val].owner) {//TODO check if val is not out of bounds
-        page_owners[val].owner = state.arg_enclave_id;
-      }
-      break;
-    case CSR_ENCLAVESETARGID:
-      state.arg_enclave_id = val;
-      break;
-#endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-    case CSR_MANAGEENCLAVEID:
-      //This instruction should only succeed if the pc is in within the management enclave.
-      if ((state.pc >= MANAGEMENT_ENCLAVE_BASE) && (state.pc < MANAGEMENT_ENCLAVE_BASE + MANAGEMENT_ENCLAVE_SIZE))
-      {
-#ifdef MARNO_DEBUG
-        fprintf(stderr, "processor.cc: Enclave ID on core %u changed to 0x%lx\n", id, val);
-#endif //MARNO_DEBUG
-        enclave_id = val;
-      } else {
-#ifdef MARNO_DEBUG
-        fprintf(stderr, "processor.cc: WARNING: pc was not in management enclave code 0x%lx", state.pc);
-#endif //MARNO_DEBUG
-      }
-      break;
-    case CSR_MANAGECHANGEPAGETAG:
-      //TODO fail if tag is not cached.
-      //This instruction takes as argument an address within the page that needs managing.
-      if(enclave_id == ENCLAVE_MANAGEMENT_ID) {
-        if(val & DRAM_BASE) {
-          int index = (val & (DRAM_BASE - 1)) / PGSIZE; //Assume DRAM_BASE is just one set bit.
-#ifdef MARNO_DEBUG
-          fprintf(stderr, "processor.cc: Changing page %d to tag: %lu\n", index, state.arg_enclave_id);
-#endif //MARNO_DEBUG
-          page_owners[index].owner = state.arg_enclave_id;
-        } else {
-          //TODO enable tagging for pages in boot ROM and management pages.
-#ifdef MARNO_DEBUG
-          fprintf(stderr, "processor.cc: WARNING: Currently tagging pages outside of DRAM is not supported 0x%lx\n", val);
-#endif //MARNO_DEBUG
-        }
-      }
-      break;
-    case CSR_MANAGESENDMESSAGE:
-      mailbox->source = enclave_id;
-      mailbox->destination = state.arg_enclave_id;
-      mailbox->content = val;
-#ifdef MARNO_DEBUG
-      fprintf(stderr, "processor.cc: core %u sending mailbox message: source 0x%016lx, destination 0x%016lx, content 0x%016lx\n", id, mailbox->source, mailbox->destination, mailbox->content);
-#endif //MARNO_DEBUG
-      break;
-#endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
+
 #ifdef COVERT_CHANNEL_POC
     case CSR_LLCMISSCOUNT:
       state.llc_miss_count++;
@@ -667,56 +607,6 @@ reg_t processor_t::get_csr(int which)
     return 0;
   }
 #endif //BARE_METAL_OUTPUT_CSR
-
-#ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-  if (which == CSR_ENCLAVEASSIGNREADER || which == CSR_ENCLAVEDONATEPAGE)
-  {
-    return 0;
-  }
-  if (which == CSR_ENCLAVESETARGID) {
-    return state.arg_enclave_id; //TODO return 0, because this is a security problem.
-  }
-  if (which == CSR_ENCLAVEGETMAILBOXBASEADDRESS)
-  {
-    for(size_t i = 0 ; i < num_of_pages; i++)
-    {
-      if(page_owners[i].reader == enclave_id && page_owners[i].owner == state.arg_enclave_id)
-      {
-        return (i*PGSIZE) | DRAM_BASE;
-      }
-    }
-    return 0;
-  }
-#endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
-  if (which == CSR_MANAGEENCLAVEID)
-  {
-    return enclave_id;
-  }
-  if (which == CSR_MANAGECHANGEPAGETAG || which == CSR_MANAGESENDMESSAGE)
-  {
-    return 0;
-  }
-  if (which == CSR_MANAGERECEIVEMESSAGE)
-  {
-    //TODO make this count as an LLC miss.
-    for(size_t i = 0; i < num_of_mailboxes; i++) { //This should be done in parallel in hardware
-      struct Message_t *message = &allMailboxes[i];
-      if(message->destination == enclave_id) {
-#ifdef MARNO_DEBUG
-        fprintf(stderr, "processor.cc: core %u at pc 0x%016lx found messages in box %lu, with message: source 0x%016lx, destination 0x%016lx, content 0x%016lx\n", id, state.pc, i, message->source, message->destination, message->content);
-#endif //MARNO_DEBUG
-        state.arg_enclave_id = message->source; //TODO this is a security problem.
-        message->destination = ENCLAVE_INVALID_ID;
-        message->source = ENCLAVE_INVALID_ID;
-        return message->content;
-      }
-    }
-    state.arg_enclave_id = ENCLAVE_INVALID_ID;
-    return 0;
-  }
-#endif // MANAGEMENT_ENCLAVE_INSTRUCTIONS
 
 #ifdef COVERT_CHANNEL_POC
   if (which == CSR_LLCMISSCOUNT) {
