@@ -33,10 +33,14 @@ static void help()
   fprintf(stderr, "  --ic=<S>:<W>:<B>      Instantiate a cache model with S sets,\n");
   fprintf(stderr, "  --dc=<S>:<W>:<B>        W ways, and B-byte blocks (with S and\n");
   fprintf(stderr, "  --l2=<S>:<W>:<B>        B both powers of 2).\n");
+#ifdef COVERT_CHANNEL_POC
   fprintf(stderr, "  --dram-banks          Instantiate banks with 2^14 rows of 2^13 Bytes\n");
+#endif
   fprintf(stderr, "  --extension=<name>    Specify RoCC Extension\n");
   fprintf(stderr, "  --enclave=<number>    Number of enclave threads to add [default 0]\n");
+#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
   fprintf(stderr, "  --manage-path=<path>  Path to management shim binary [default ../build/management.bin]\n");
+#endif
   fprintf(stderr, "  --extlib=<name>       Shared library to load\n");
   fprintf(stderr, "  --rbb-port=<port>     Listen on <port> for remote bitbang connection\n");
   fprintf(stderr, "  --dump-dts            Print device tree string and exit\n");
@@ -48,7 +52,11 @@ static void help()
   exit(1);
 }
 
-static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *num_of_pages, size_t num_enclaves, const char* management_path, reg_t* dram_size)
+static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *num_of_pages, size_t num_enclaves,
+#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
+  const char* management_path,
+#endif
+  reg_t* dram_size)
 {
   // handle legacy mem argument
   char* p;
@@ -145,16 +153,20 @@ int main(int argc, char** argv)
   bool dtb_enabled = true;
   size_t nprocs = 1;
   size_t nenclaves = 0;
+#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
   char manage_path[1024] = "../build/management.bin";
+#endif
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
   const char* ic_string = NULL;
   const char* dc_string = NULL;
   const char* llc_string = NULL;
   const char* llc_partition_string = NULL;
+#ifdef COVERT_CHANNEL_POC
   bool enable_banks = false;
   std::unique_ptr<dram_bank_t> dram_bank;
   reg_t dram_size = 0;
+#endif //COVERT_CHANNEL_POC
   std::unique_ptr<l2cache_sim_t> l2;
   std::unique_ptr<partitioned_cache_sim_t> partitioned_l2;
   std::function<extension_t*()> extension;
@@ -187,13 +199,21 @@ int main(int argc, char** argv)
     nenclaves += 1; //TODO remove the plus one and make sure that the first enclave core is not just reserved for management stuff.
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
   });
+#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
   parser.option(0, "manage-path", 1, [&](const char* s){strncpy(manage_path, s, 1024);});
+#endif
   parser.option('h', 0, 0, [&](const char* s){help();});
   parser.option('d', 0, 0, [&](const char* s){debug = true;});
   parser.option('g', 0, 0, [&](const char* s){histogram = true;});
   parser.option('l', 0, 0, [&](const char* s){log = true;});
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
-  parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s, &num_of_pages, nenclaves, manage_path, &dram_size);});
+  parser.option('m', 0, 1, [&](const char* s){
+    mems = make_mems(s, &num_of_pages, nenclaves,
+#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
+      manage_path,
+#endif
+      &dram_size);
+  });
   // I wanted to use --halted, but for some reason that doesn't work.
   parser.option('H', 0, 0, [&](const char* s){halted = true;});
   parser.option(0, "rbb-port", 1, [&](const char* s){use_rbb = true; rbb_port = atoi(s);});
@@ -203,7 +223,9 @@ int main(int argc, char** argv)
   parser.option(0, "dc", 1, [&](const char* s){dc_string = s;});
   parser.option(0, "l2", 1, [&](const char* s){llc_string = s;});
   parser.option(0, "l2_partitioning", 1, [&](const char* s){llc_partition_string = s;});
+#ifdef COVERT_CHANNEL_POC
   parser.option(0, "dram-banks", 0, [&](const char* s){enable_banks = true;});
+#endif
   parser.option(0, "isa", 1, [&](const char* s){isa = s;});
   parser.option(0, "extension", 1, [&](const char* s){extension = find_extension(s);});
   parser.option(0, "dump-dts", 0, [&](const char *s){dump_dts = true;});
@@ -224,7 +246,11 @@ int main(int argc, char** argv)
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
   if (mems.empty())
-    mems = make_mems("2048", &num_of_pages, nenclaves, manage_path, &dram_size);
+    mems = make_mems("2048", &num_of_pages, nenclaves,
+#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
+      manage_path,
+#endif
+      &dram_size);
 
   if (!*argv1)
     help();

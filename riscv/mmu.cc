@@ -115,7 +115,7 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t e
     if(check_identifier(paddr, enclave_id, true)) {
       memcpy(bytes, host_addr, len);
       if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD)) {
-        if(tracer.trace(paddr, len, LOAD) == LLC_MISS) { //TODO should tracer trace any unauthorized loads?
+        if(tracer.trace(paddr, len, LOAD) == LLC_MISS) {
 #ifdef COVERT_CHANNEL_POC
           proc->set_csr(CSR_LLCMISSCOUNT, 1);
 #endif //COVERT_CHANNEL_POC
