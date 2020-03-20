@@ -11,3 +11,5 @@ autom4te.cache/
 .gdb_history
 *.txt
 *.a
+riscv-tools/
+*.out
