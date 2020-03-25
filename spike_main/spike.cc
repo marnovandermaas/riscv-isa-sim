@@ -219,7 +219,6 @@ int main(int argc, char** argv)
         address_bits += num_bits;
       }
     }
-    fprintf(stdout, "spike.cc: dram_size %lu is equal to 2^%lu\n", dram_size, address_bits);
     dram_bank.reset(new dram_bank_t(address_bits, 14, 13, 0));
   }
 #endif
