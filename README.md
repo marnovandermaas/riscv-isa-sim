@@ -66,4 +66,6 @@ core   1: 0x0000000080020034 (0x40501073) csrw    bareMetalExit, zero
 
 >>>>>INSTRUCTION_COUNT<<<<<
 366
+
+>>>>>CACHE_OUTPUT<<<<<
 ```
