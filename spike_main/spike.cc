@@ -317,7 +317,7 @@ int main(int argc, char** argv)
 
   sim_t s(isa, nprocs + nenclaves, nenclaves, halted, start_pc, mems, htif_args, std::move(hartids),
       progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2, rmts_arg,
-      static_llc_arg, mailboxes, num_of_mailboxes, num_of_pages);
+      static_llc_arg, mailboxes, num_of_mailboxes, num_of_pages, fopen("stats.log", "w"));
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(new jtag_dtm_t(&s.debug_module));
   if (use_rbb) {

@@ -28,29 +28,29 @@ static void handle_signal(int sig)
 
 void sim_t::output_stats()
 {
-  fprintf(stdout, "%lu\n", procs[0]->get_csr(CSR_MINSTRET));
+  fprintf(stat_log, "%lu\n", procs[0]->get_csr(CSR_MINSTRET));
   for(size_t i = 0; i < nenclaves + 1; i++)
   {
     if(ics[i]) {
-      ics[i]->print_stats(true);
+      ics[i]->print_stats(stat_log);
       std::cout << std::endl;
     }
     if(dcs[i]) {
-      dcs[i]->print_stats(true);
+      dcs[i]->print_stats(stat_log);
       std::cout << std::endl;
     }
     if(rmts[i]) {
-      rmts[i]->print_stats(true);
+      rmts[i]->print_stats(stat_log);
       std::cout << std::endl;
     }
     if(static_llc[i]) {
-      static_llc[i]->print_stats(true);
+      static_llc[i]->print_stats(stat_log);
       std::cout << std::endl;
     }
   }
   if(l2 != NULL)
   {
-    l2->print_stats(true);
+    l2->print_stats(stat_log);
     std::cout << std::endl;
   }
   std::cout << std::endl;
@@ -82,7 +82,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
              std::vector<std::pair<reg_t, mem_t*>> mems,
              const std::vector<std::string>& args,
              std::vector<int> const hartids, unsigned progsize,
-             unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, l2cache_sim_t *l2, l2cache_sim_t **rmts, l2cache_sim_t **static_llc, struct Message_t *mailboxes, size_t num_of_mailboxes, reg_t num_of_pages)
+             unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, l2cache_sim_t *l2, l2cache_sim_t **rmts, l2cache_sim_t **static_llc, struct Message_t *mailboxes, size_t num_of_mailboxes, reg_t num_of_pages, FILE *_stat_log)
   : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), nenclaves(nenclaves),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
@@ -92,6 +92,9 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
 #ifdef PRAESIDIO_DEBUG
   fprintf(stderr, "sim.cc: Constructing simulator with %lu processors and %lu enclaves.\n", nprocs, nenclaves);
 #endif
+  if(_stat_log != NULL) {
+    stat_log = _stat_log;
+  }
 
   page_owners = new page_owner_t[num_of_pages];
   for(reg_t i = 0; i < num_of_pages; i++)
@@ -173,6 +176,8 @@ int sim_t::run()
 #ifdef PRAESIDIO_DEBUG
   fprintf(stderr, "sim.cc: running htif.\n");
 #endif
+
+  fprintf(stat_log, "This is the stat log.\n");
   return htif_t::run();
 }
 

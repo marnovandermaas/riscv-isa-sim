@@ -27,7 +27,7 @@ public:
   sim_t(const char* isa, size_t _nprocs, size_t _nenclaves,  bool halted, reg_t start_pc,
         std::vector<std::pair<reg_t, mem_t*>> mems,
         const std::vector<std::string>& args, const std::vector<int> hartids,
-        unsigned progsize, unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, l2cache_sim_t *l2, l2cache_sim_t **rmts, l2cache_sim_t **static_llc, struct Message_t *mailboxes, size_t num_of_mailboxes, reg_t num_of_pages);
+        unsigned progsize, unsigned max_bus_master_bits, bool require_authentication, icache_sim_t **ics, dcache_sim_t **dcs, l2cache_sim_t *l2, l2cache_sim_t **rmts, l2cache_sim_t **static_llc, struct Message_t *mailboxes, size_t num_of_mailboxes, reg_t num_of_pages, FILE *stat_log);
   ~sim_t();
 
   // run the simulation to completion
@@ -64,6 +64,7 @@ private:
   std::unique_ptr<rom_device_t> enclave_rom;
   std::unique_ptr<clint_t> clint;
   bus_t bus;
+  FILE *stat_log = stdout;
 
   processor_t* get_core(const std::string& i);
   void step(size_t n); // step through simulation
