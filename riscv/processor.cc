@@ -554,6 +554,9 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_BAREMETALEXIT:
       sim->request_halt(id);//exit(0);
       break;
+    case CSR_BAREMETALSTATS:
+      sim->output_stats();
+      break;
 #endif //BARE_METAL_OUTPUT_CSR
 #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
     case CSR_ENCLAVEASSIGNREADER:
@@ -663,7 +666,7 @@ reg_t processor_t::get_csr(int which)
     return 0;
 
 #ifdef BARE_METAL_OUTPUT_CSR
-  if (which == CSR_BAREMETALOUTPUT || which == CSR_BAREMETALEXIT)
+  if (which == CSR_BAREMETALOUTPUT || which == CSR_BAREMETALEXIT || which == CSR_BAREMETALSTATS)
   {
     return 0;
   }

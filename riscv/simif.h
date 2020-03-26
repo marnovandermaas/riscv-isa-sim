@@ -17,6 +17,7 @@ public:
   // Callback for processors to let the simulation know they were reset.
   virtual void proc_reset(unsigned id) = 0;
   virtual void request_halt(uint32_t id) = 0;
+  virtual void output_stats() = 0;
 };
 
 #endif

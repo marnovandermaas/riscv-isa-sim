@@ -26,6 +26,36 @@ static void handle_signal(int sig)
   signal(sig, &handle_signal);
 }
 
+void sim_t::output_stats()
+{
+  fprintf(stdout, "%lu\n", procs[0]->get_csr(CSR_MINSTRET));
+  for(size_t i = 0; i < nenclaves + 1; i++)
+  {
+    if(ics[i]) {
+      ics[i]->print_stats(true);
+      std::cout << std::endl;
+    }
+    if(dcs[i]) {
+      dcs[i]->print_stats(true);
+      std::cout << std::endl;
+    }
+    if(rmts[i]) {
+      rmts[i]->print_stats(true);
+      std::cout << std::endl;
+    }
+    if(static_llc[i]) {
+      static_llc[i]->print_stats(true);
+      std::cout << std::endl;
+    }
+  }
+  if(l2 != NULL)
+  {
+    l2->print_stats(true);
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+}
+
 void sim_t::request_halt(uint32_t id)
 {
   static bool procRequests[64] = {false};
@@ -40,44 +70,7 @@ void sim_t::request_halt(uint32_t id)
       }
     }
   }
-  fprintf(stdout, "\n>>>>>INSTRUCTION_COUNT<<<<<\n%lu\n", procs[0]->get_csr(CSR_MINSTRET));
-  bool csv_style = true;
-#ifdef PRAESIDIO_DEBUG
-  csv_style = false;
-#endif
-  while(true) {
-    if(csv_style) {
-      fprintf(stdout, "\n>>>>>CACHE_OUTPUT<<<<<\n");
-    }
-    for(size_t i = 0; i < nenclaves + 1; i++)
-    {
-      if((ics[i] || dcs[i]) && !csv_style) fprintf(stderr, "\nCache stats for enclave %lu:\n", i);
-      if(ics[i]) {
-        ics[i]->print_stats(csv_style);
-        std::cout << std::endl;
-      }
-      if(dcs[i]) {
-        dcs[i]->print_stats(csv_style);
-        std::cout << std::endl;
-      }
-      if(rmts[i]) {
-        rmts[i]->print_stats(csv_style);
-        std::cout << std::endl;
-      }
-      if(static_llc[i]) {
-        static_llc[i]->print_stats(csv_style);
-        std::cout << std::endl;
-      }
-    }
-    if(l2 != NULL)
-    {
-      if(!csv_style) fprintf(stderr, "\nShared Cache:\n");
-      l2->print_stats(csv_style);
-      std::cout << std::endl;
-    }
-    if(csv_style) break;
-    csv_style = true;
-  }
+  output_stats();
   for(unsigned int i = 0; i < procs.size(); i++)
   {
     procs[i]->output_histogram();
