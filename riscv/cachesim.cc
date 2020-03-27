@@ -83,13 +83,13 @@ cache_sim_t::~cache_sim_t()
 void cache_sim_t::print_stats(FILE *stat_log)
 {
   if(read_accesses + write_accesses == 0) {
-    fprintf(stat_log, "%s No stats recorded, ", name);
+    fprintf(stat_log, "%s No stats recorded, ", name.c_str());
     return;
   }
 
   float mr = 1.0f * (read_misses+write_misses)/(read_accesses+write_accesses);
 
-  fprintf(stat_log, "%s, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %f", name, bytes_read, bytes_written, read_accesses, write_accesses, read_misses, write_misses, writebacks, mr);
+  fprintf(stat_log, "%s, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %f", name.c_str(), bytes_read, bytes_written, read_accesses, write_accesses, read_misses, write_misses, writebacks, mr);
 }
 
 uint64_t* cache_sim_t::check_tag(uint64_t addr)
@@ -266,7 +266,7 @@ void remapping_table_t::print_stats(FILE *stat_log)
 {
   cache_sim_t::print_stats(stat_log);
   if(read_accesses + write_accesses == 0) {
-    fprintf(stat_log, "%s No stats recorded, ");
+    fprintf(stat_log, "%s No stats recorded, ", name.c_str());
     return;
   }
   float new_mr = 1.0f *
