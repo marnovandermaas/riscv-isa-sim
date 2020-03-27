@@ -89,7 +89,7 @@ void cache_sim_t::print_stats(FILE *stat_log)
 
   float mr = 1.0f * (read_misses+write_misses)/(read_accesses+write_accesses);
 
-  fprintf(stat_log, "%s, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %f", name.c_str(), bytes_read, bytes_written, read_accesses, write_accesses, read_misses, write_misses, writebacks, mr);
+  fprintf(stat_log, "%s, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %f, ", name.c_str(), bytes_read, bytes_written, read_accesses, write_accesses, read_misses, write_misses, writebacks, mr);
 }
 
 uint64_t* cache_sim_t::check_tag(uint64_t addr)
@@ -273,7 +273,7 @@ void remapping_table_t::print_stats(FILE *stat_log)
         (cache_sim_t::read_misses + cache_sim_t::write_misses + llc_read_misses + llc_write_misses)
         /
         (cache_sim_t::read_accesses + cache_sim_t::write_accesses);
-  fprintf(stat_log, "%lu, %lu, %f", llc_read_misses, llc_write_misses, new_mr);
+  fprintf(stat_log, "%lu, %lu, %f, ", llc_read_misses, llc_write_misses, new_mr);
 }
 
 partitioned_cache_sim_t::partitioned_cache_sim_t(size_t slots)
