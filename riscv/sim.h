@@ -33,7 +33,7 @@ public:
   // run the simulation to completion
   int run();
   void request_halt(uint32_t id);
-  void output_stats();
+  void output_stats(reg_t label=0);
   void set_debug(bool value);
   void set_log(bool value);
   void set_histogram(bool value);

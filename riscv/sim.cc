@@ -26,9 +26,9 @@ static void handle_signal(int sig)
   signal(sig, &handle_signal);
 }
 
-void sim_t::output_stats()
+void sim_t::output_stats(reg_t label)
 {
-  fprintf(stat_log, "%lu\n", procs[0]->get_csr(CSR_MINSTRET));
+  fprintf(stat_log, "%lu, %lu\n", label, procs[0]->get_csr(CSR_MINSTRET));
   for(size_t i = 0; i < nenclaves + 1; i++)
   {
     if(ics[i]) {
@@ -177,7 +177,7 @@ int sim_t::run()
   fprintf(stderr, "sim.cc: running htif.\n");
 #endif
 
-  fprintf(stat_log, "This is the stat log.\n");
+  fprintf(stat_log, "label, instruction count\n");
   return htif_t::run();
 }
 

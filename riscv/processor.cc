@@ -555,7 +555,7 @@ void processor_t::set_csr(int which, reg_t val)
       sim->request_halt(id);//exit(0);
       break;
     case CSR_BAREMETALSTATS:
-      sim->output_stats();
+      sim->output_stats(val);
       break;
 #endif //BARE_METAL_OUTPUT_CSR
 #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
