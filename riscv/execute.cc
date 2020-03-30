@@ -247,6 +247,9 @@ void processor_t::step(size_t n)
     }
 
     state.minstret += instret;
+    if(state.prv == PRV_S) {
+      state.minstretpriv += instret;
+    }
     n -= instret;
   }
 }

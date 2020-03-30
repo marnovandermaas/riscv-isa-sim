@@ -131,6 +131,7 @@ struct state_t
 #ifdef COVERT_CHANNEL_POC
   reg_t llc_miss_count;
 #endif //COVERT_CHANNEL_POC
+  reg_t minstretpriv;
 
   uint32_t fflags;
   uint32_t frm;

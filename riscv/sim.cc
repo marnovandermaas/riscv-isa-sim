@@ -28,7 +28,7 @@ static void handle_signal(int sig)
 
 void sim_t::output_stats(reg_t label)
 {
-  fprintf(stat_log, "%lu, %lu, ", label, procs[0]->get_csr(CSR_MINSTRET));
+  fprintf(stat_log, "%lu, %lu, %lu, ", label, procs[0]->get_csr(CSR_MINSTRET), procs[0]->get_state()->minstretpriv);
   for(size_t i = 0; i < nenclaves + 1; i++)
   {
     if(ics[i]) {
@@ -172,7 +172,7 @@ int sim_t::run()
   fprintf(stderr, "sim.cc: running htif.\n");
 #endif
 
-  fprintf(stat_log, "label, instruction count, cache stats ...\n");
+  fprintf(stat_log, "label, instruction count (core 0), privileged instruction count (core 0), cache stats ...\n");
   return htif_t::run();
 }
 
