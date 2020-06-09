@@ -860,7 +860,8 @@ reg_t processor_t::get_csr(int which)
       return state.dscratch;
   }
 #ifdef PRAESIDIO_DEBUG
-  fprintf(stderr, "processor.cc: get_csr illegal instruction.\n");
+  if(which != CSR_TIME)
+    fprintf(stderr, "processor.cc: get_csr illegal instruction CSR: %d PC: 0x%016lx.\n", which, state.pc);
 #endif
   throw trap_illegal_instruction(0);
 }
