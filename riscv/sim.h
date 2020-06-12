@@ -51,6 +51,8 @@ public:
   // Callback for processors to let the simulation know they were reset.
   void proc_reset(unsigned id);
 
+  void process_enclave_read_access(reg_t paddr, enclave_id_t writer_id, enclave_id_t reader_id);
+
 private:
   //TODO initialize
   enclave_id_t memory_tags[32768]; //1GB worth of tags for 4kB pages: 2^30/(4*8*2^10) = 2^15 = 32768

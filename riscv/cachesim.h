@@ -47,6 +47,9 @@ class cache_sim_t
   static cache_sim_t* construct(const char* config, const char* name);
   static void parse_config_string(const char* config, size_t *sets, size_t *ways, size_t *linesz); //Extracts sets ways and linesz from config string.
 
+  void invalidate_address(reg_t addr);
+  void perform_writeback(reg_t addr);
+
  protected:
   static const uint64_t VALID = 1ULL << 63;
   static const uint64_t DIRTY = 1ULL << 62;
@@ -233,6 +236,12 @@ class dcache_sim_t : public cache_memtracer_t
       }
     }
     return NO_LLC_INTERACTION;
+  }
+  void invalidate_address(reg_t addr) {
+    cache->invalidate_address(addr);
+  }
+  void perform_writeback(reg_t addr) {
+    cache->perform_writeback(addr);
   }
 };
 

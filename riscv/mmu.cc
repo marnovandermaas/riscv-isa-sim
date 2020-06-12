@@ -96,11 +96,16 @@ reg_t reg_from_bytes(size_t len, const uint8_t* bytes)
   abort();
 }
 
-bool mmu_t::check_identifier(reg_t paddr, enclave_id_t id, bool load) {
+bool mmu_t::check_identifier(reg_t paddr, enclave_id_t id, bool load, enclave_id_t* writer_id) {
   if(paddr >= DRAM_BASE && paddr < DRAM_BASE + PGSIZE*num_of_pages) {
     reg_t dram_offset = paddr - DRAM_BASE;
     reg_t page_num = dram_offset / PGSIZE;
     if(load && id == page_owners[page_num].reader) {
+      if(writer_id == NULL) {
+        printf("Checking identifier and wanting to set writer_id return value to true, but reader pointer is NULL.\n");
+        exit(-5);
+      }
+      *writer_id = page_owners[page_num].owner;
       return true;
     }
     return id == page_owners[page_num].owner;
@@ -110,15 +115,20 @@ bool mmu_t::check_identifier(reg_t paddr, enclave_id_t id, bool load) {
 
 void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t enclave_id)
 {
+  enclave_id_t writer_id = ENCLAVE_INVALID_ID;
   reg_t paddr = translate(addr, LOAD);
   if (auto host_addr = sim->addr_to_mem(paddr)) {
-    if(check_identifier(paddr, enclave_id, true)) {
+    if(check_identifier(paddr, enclave_id, true, &writer_id)) {
       memcpy(bytes, host_addr, len);
       if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD)) {
-        if(tracer.trace(paddr, len, LOAD) == LLC_MISS) { //TODO should tracer trace any unauthorized loads?
+        trace_result resultOfTrace = tracer.trace(paddr, len, LOAD);
+        if(resultOfTrace == LLC_MISS) {
 #ifdef COVERT_CHANNEL_POC
-          proc->set_csr(CSR_LLCMISSCOUNT, 1);
+            proc->set_csr(CSR_LLCMISSCOUNT, 1);
 #endif //COVERT_CHANNEL_POC
+        }
+        if(resultOfTrace != NO_LLC_INTERACTION && writer_id != ENCLAVE_INVALID_ID) {
+            proc->sim->process_enclave_read_access(paddr, writer_id, enclave_id);
         }
       } else {
         refill_tlb(addr, paddr, host_addr, LOAD);

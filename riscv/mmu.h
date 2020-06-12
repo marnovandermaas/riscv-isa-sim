@@ -55,7 +55,7 @@ class trigger_matched_t
 class mmu_t
 {
 private:
-  bool check_identifier(reg_t paddr, enclave_id_t id, bool load);
+  bool check_identifier(reg_t paddr, enclave_id_t id, bool load, enclave_id_t *writer_id = NULL);
 public:
   mmu_t(simif_t* sim, processor_t* proc, page_owner_t *page_owners, size_t num_pages);
   ~mmu_t();
