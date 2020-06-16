@@ -91,6 +91,8 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
     stat_log = _stat_log;
   }
 
+  unaccounted_for_steps = 0;
+
   page_owners = new page_owner_t[num_of_pages];
   for(reg_t i = 0; i < num_of_pages; i++)
   {
@@ -140,6 +142,22 @@ sim_t::~sim_t()
   for (size_t i = 0; i < procs.size(); i++)
     delete procs[i];
   delete debug_mmu;
+}
+
+void sim_t::process_enclave_read_access(reg_t paddr, enclave_id_t writer_id, enclave_id_t reader_id) {
+    //for all processors:
+    //  is the enclave identifier the reader?
+    //      call DC function to check presence and invalidate line
+    //  is the enclave identifier the writer?
+    //      call DC function to perform writeback
+    for(unsigned int i = 0; i < nenclaves + 1; i++) {
+        enclave_id_t current_id = procs[procs.size() - nenclaves - 1 + i]->get_enclave_id();
+        if(current_id == reader_id) {
+            dcs[i]->invalidate_address(paddr);
+        } else if (current_id == writer_id) {
+            dcs[i]->perform_writeback(paddr);
+        }
+    }
 }
 
 void sim_thread_main(void* arg)
@@ -194,6 +212,11 @@ void sim_t::step(size_t n)
       if (++current_proc == procs.size()) {
         current_proc = 0;
         clint->increment(INTERLEAVE / INSNS_PER_RTC_TICK);
+        unaccounted_for_steps += INTERLEAVE % INSNS_PER_RTC_TICK;
+        if(unaccounted_for_steps >= INSNS_PER_RTC_TICK) {
+            clint->increment(1);
+            unaccounted_for_steps -= INSNS_PER_RTC_TICK;
+        }
       }
 
       host->switch_to();

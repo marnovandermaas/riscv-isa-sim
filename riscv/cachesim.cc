@@ -169,6 +169,24 @@ void cache_sim_t::set_miss_handler(cache_sim_t* mh)
   miss_handler = mh;
 }
 
+void cache_sim_t::invalidate_address(reg_t addr) {
+    uint64_t *tag = check_tag(addr);
+    if(tag != NULL) {
+        *tag |= VALID;
+    }
+}
+
+void cache_sim_t::perform_writeback(reg_t addr) {
+    uint64_t *tag = check_tag(addr);
+    if(tag != NULL) {
+        if (miss_handler) {
+            miss_handler->access(addr, linesz, true);
+        }
+        *tag |= VALID;
+        writebacks++;
+    }
+}
+
 remapping_table_t::remapping_table_t(size_t _sets, size_t _ways, size_t _linesz, const char* _name, partitioned_cache_sim_t* _l2, enclave_id_t _id) :
   cache_sim_t(_sets, _ways, _linesz, _name), llc(_l2), enclave_id(_id)
 {
