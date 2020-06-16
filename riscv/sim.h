@@ -68,6 +68,8 @@ private:
   bus_t bus;
   FILE *stat_log = stdout;
 
+  size_t unaccounted_for_steps;
+
   processor_t* get_core(const std::string& i);
   void step(size_t n); // step through simulation
 #ifdef PRAESIDIO_DEBUG

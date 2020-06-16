@@ -91,6 +91,8 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
     stat_log = _stat_log;
   }
 
+  unaccounted_for_steps = 0;
+
   page_owners = new page_owner_t[num_of_pages];
   for(reg_t i = 0; i < num_of_pages; i++)
   {
@@ -210,6 +212,11 @@ void sim_t::step(size_t n)
       if (++current_proc == procs.size()) {
         current_proc = 0;
         clint->increment(INTERLEAVE / INSNS_PER_RTC_TICK);
+        unaccounted_for_steps += INTERLEAVE % INSNS_PER_RTC_TICK;
+        if(unaccounted_for_steps >= INSNS_PER_RTC_TICK) {
+            clint->increment(1);
+            unaccounted_for_steps -= INSNS_PER_RTC_TICK;
+        }
       }
 
       host->switch_to();
