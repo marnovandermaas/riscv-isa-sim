@@ -152,10 +152,12 @@ void sim_t::process_enclave_read_access(reg_t paddr, enclave_id_t writer_id, enc
     //      call DC function to perform writeback
     for(unsigned int i = 0; i < nenclaves + 1; i++) {
         enclave_id_t current_id = procs[procs.size() - nenclaves - 1 + i]->get_enclave_id();
-        if(current_id == reader_id) {
-            dcs[i]->invalidate_address(paddr);
-        } else if (current_id == writer_id) {
-            dcs[i]->perform_writeback(paddr);
+        if(dcs[i]) {
+            if(current_id == reader_id) {
+                dcs[i]->invalidate_address(paddr);
+            } else if (current_id == writer_id) {
+                dcs[i]->perform_writeback(paddr);
+            }
         }
     }
 }

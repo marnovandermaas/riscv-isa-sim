@@ -127,7 +127,7 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t e
             proc->set_csr(CSR_LLCMISSCOUNT, 1);
 #endif //COVERT_CHANNEL_POC
         }
-        if(resultOfTrace != NO_LLC_INTERACTION && writer_id != ENCLAVE_INVALID_ID) {
+        if(resultOfTrace == NO_LLC_INTERACTION && writer_id != ENCLAVE_INVALID_ID) {
             proc->sim->process_enclave_read_access(paddr, writer_id, enclave_id);
         }
       } else {
