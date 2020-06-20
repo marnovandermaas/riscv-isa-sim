@@ -567,11 +567,13 @@ void processor_t::set_csr(int which, reg_t val)
 #endif //PRAESIDIO_DEBUG
         page_owners[val].reader = state.arg_enclave_id;
       }
-#ifdef PRAESIDIO_DEBUG
       else {
+#ifdef PRAESIDIO_DEBUG
         fprintf(stderr, "proseccor.cc: WARNING failed to assign page %lu with reader %lu, because owner is 0x%016lx and you are 0x%016lx.\n", val, state.arg_enclave_id, page_owners[val].owner, enclave_id);
-      }
 #endif //PRAESIDIO_DEBUG
+        mailbox->destination = ENCLAVE_INVALID_ID;
+      }
+      state.arg_enclave_id = ENCLAVE_INVALID_ID;
       break;
     case CSR_ENCLAVEDONATEPAGE:
       if(enclave_id == page_owners[val].owner) {//TODO check if val is not out of bounds
@@ -678,21 +680,7 @@ reg_t processor_t::get_csr(int which)
     return 0;
   }
   if (which == CSR_ENCLAVESETARGID) {
-    return state.arg_enclave_id; //TODO return 0, because this is a security problem.
-  }
-  if (which == CSR_ENCLAVEGETMAILBOXBASEADDRESS)
-  {
-    for(size_t i = 0 ; i < num_of_pages; i++)
-    {
-      if(page_owners[i].reader == enclave_id && page_owners[i].owner == state.arg_enclave_id)
-      {
-#ifdef PRAESIDIO_DEBUG
-        fprintf(stderr, "processor.cc: Got mailbox address: 0x%016lx\n", (i*PGSIZE) | DRAM_BASE);
-#endif //PRAESIDIO_DEBUG
-        return (i*PGSIZE) | DRAM_BASE;
-      }
-    }
-    return 0;
+    return state.arg_enclave_id; //TODO is this a security problem (cannot set this to 0 because then receivMessage breaks)
   }
 #endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
 
