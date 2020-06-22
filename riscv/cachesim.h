@@ -48,7 +48,7 @@ class cache_sim_t
   static void parse_config_string(const char* config, size_t *sets, size_t *ways, size_t *linesz); //Extracts sets ways and linesz from config string.
 
   void invalidate_address(reg_t addr);
-  void perform_writeback(reg_t addr);
+  bool perform_writeback(reg_t addr); //Returns whether writeback was actually done
 
  protected:
   static const uint64_t VALID = 1ULL << 63;
@@ -240,8 +240,8 @@ class dcache_sim_t : public cache_memtracer_t
   void invalidate_address(reg_t addr) {
     cache->invalidate_address(addr);
   }
-  void perform_writeback(reg_t addr) {
-    cache->perform_writeback(addr);
+  bool perform_writeback(reg_t addr) {
+    return cache->perform_writeback(addr);
   }
 };
 
