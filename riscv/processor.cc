@@ -857,7 +857,7 @@ reg_t processor_t::get_csr(int which)
 reg_t illegal_instruction(processor_t* p, insn_t insn, reg_t pc)
 {
 #ifdef PRAESIDIO_DEBUG
-  fprintf(stderr, "processor.cc: throwing illegal instruction.\n");
+  fprintf(stderr, "processor.cc: throwing illegal instruction at pc 0x%016lx : 0x%016lx\n", pc, insn.bits());
 #endif
   throw trap_illegal_instruction(0);
 }
