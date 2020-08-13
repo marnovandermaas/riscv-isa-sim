@@ -150,7 +150,7 @@ void sim_t::process_enclave_read_access(reg_t paddr, enclave_id_t writer_id, enc
     //      call DC function to check presence and invalidate line
     //  is the enclave identifier the writer?
     //      call DC function to perform writeback
-    unsigned int reader_i;
+    unsigned int reader_i = 0;
     bool found_reader = false;
     bool writeback_done = false;
     for(unsigned int i = 0; i < nenclaves + 1; i++) {
