@@ -58,13 +58,17 @@ tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr, enclave_id_t enclave_id)
       return refill_tlb(vaddr, paddr, host_addr, FETCH);
     } else {
 #ifdef PRAESIDIO_DEBUG
-      fprintf(stderr, "mmu.cc: Warning! Denying fetch to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", enclave_id, vaddr, (uint64_t) host_addr, num_of_pages, PGSIZE);
+      fprintf(stderr, "mmu.cc: Warning! Denying fetch to enclave 0x%08x, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", enclave_id, vaddr, (uint64_t) host_addr, num_of_pages, PGSIZE);
 #endif
       throw trap_instruction_access_fault(vaddr);
     }
   } else {
-    if (!sim->mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp))
+    if (!sim->mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp)) {
+#ifdef PRAESIDIO_DEBUG
+      fprintf(stderr, "mmu.cc: Warning! Failed MMIO load during fetch by enclave 0x%08x, virtual address 0x%lx, physical address 0x%lx\n", enclave_id, vaddr, (uint64_t) host_addr);
+#endif
       throw trap_instruction_access_fault(vaddr);
+    }
     tlb_entry_t entry = {(char*)&fetch_temp - vaddr, paddr - vaddr};
     return entry;
   }
@@ -135,7 +139,7 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t e
       }
     } else {
 #ifdef PRAESIDIO_DEBUG
-      fprintf(stderr, "mmu.cc: Warning! Denying load access to enclave 0x%0lx, virtual address 0x%lx, physical address 0x%lx, number of pages %lu, page size 0x%lx\n", enclave_id, addr, paddr, num_of_pages, PGSIZE);
+      fprintf(stderr, "mmu.cc: Warning! Denying load access to enclave 0x%08x, virtual address 0x%016lx, physical address 0x%016lx, number of pages %lu, page size 0x%lx\n", enclave_id, addr, paddr, num_of_pages, PGSIZE);
 #endif
       throw trap_load_access_fault(addr);
     }
@@ -173,7 +177,7 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
         refill_tlb(addr, paddr, host_addr, STORE);
     } else {
 #ifdef PRAESIDIO_DEBUG
-      fprintf(stderr, "mmu.cc: Warning! Denying store access to enclave 0x%0lx, virtual address 0x%0lx, physical address 0x%0lx, number of pages %lu, page size 0x%0lx\n", enclave_id, addr, paddr, num_of_pages, PGSIZE);
+      fprintf(stderr, "mmu.cc: Warning! Denying store access to enclave 0x%08x, virtual address 0x%016lx, physical address 0x%016lx, number of pages %lu, page size 0x%0lx\n", enclave_id, addr, paddr, num_of_pages, PGSIZE);
 #endif
       throw trap_store_access_fault(addr);
     }
@@ -296,11 +300,13 @@ fail:
   }
 
 fail_access:
+#ifdef PRAESIDIO_DEBUG
+  fprintf(stderr, "mmu.cc: Failed to access the page table in page walk.\n");
+#endif
   switch (type) {
     case FETCH: throw trap_instruction_access_fault(addr);
     case LOAD: throw trap_load_access_fault(addr);
     case STORE:
-      fprintf(stderr, "mmu.cc: throwing trap store access fault in page walk.\n");
       throw trap_store_access_fault(addr);
     default: abort();
   }

@@ -569,7 +569,7 @@ void processor_t::set_csr(int which, reg_t val)
       }
       else {
 #ifdef PRAESIDIO_DEBUG
-        fprintf(stderr, "proseccor.cc: WARNING failed to assign page %lu with reader %lu, because owner is 0x%016lx and you are 0x%016lx.\n", val, state.arg_enclave_id, page_owners[val].owner, enclave_id);
+        fprintf(stderr, "proseccor.cc: WARNING failed to assign page %lu with reader %u, because owner is 0x%08x and you are 0x%08x.\n", val, state.arg_enclave_id, page_owners[val].owner, enclave_id);
 #endif //PRAESIDIO_DEBUG
         mailbox->destination = ENCLAVE_INVALID_ID;
       }
@@ -578,7 +578,7 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_ENCLAVEDONATEPAGE:
       if(enclave_id == page_owners[val].owner) {//TODO check if val is not out of bounds
 #ifdef PRAESIDIO_DEBUG
-        fprintf(stderr, "processor.cc: Donating page %lu to enclave %lu\n", val, state.arg_enclave_id);
+        fprintf(stderr, "processor.cc: Donating page %lu to enclave %u\n", val, state.arg_enclave_id);
 #endif //PRAESIDIO_DEBUG
         page_owners[val].owner = state.arg_enclave_id;
       }
@@ -630,7 +630,7 @@ void processor_t::set_csr(int which, reg_t val)
       mailbox->destination = state.arg_enclave_id;
       mailbox->content = val;
 #ifdef PRAESIDIO_DEBUG
-      fprintf(stderr, "processor.cc: core %u sending mailbox message: source 0x%016lx, destination 0x%016lx, content 0x%016lx\n", id, mailbox->source, mailbox->destination, mailbox->content);
+      fprintf(stderr, "processor.cc: core %u sending mailbox message: source 0x%08x, destination 0x%08x, content 0x%016lx\n", id, mailbox->source, mailbox->destination, mailbox->content);
 #endif //PRAESIDIO_DEBUG
       break;
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
@@ -700,7 +700,7 @@ reg_t processor_t::get_csr(int which)
       struct Message_t *message = &allMailboxes[i];
       if(message->destination == enclave_id) {
 #ifdef PRAESIDIO_DEBUG
-        fprintf(stderr, "processor.cc: core %u at pc 0x%016lx found messages in box %lu, with message: source 0x%016lx, destination 0x%016lx, content 0x%016lx\n", id, state.pc, i, message->source, message->destination, message->content);
+        fprintf(stderr, "processor.cc: core %u at pc 0x%016lx found messages in box %lu, with message: source 0x%08x, destination 0x%08x, content 0x%016lx\n", id, state.pc, i, message->source, message->destination, message->content);
 #endif //PRAESIDIO_DEBUG
         state.arg_enclave_id = message->source; //TODO this is a security problem.
         message->destination = ENCLAVE_INVALID_ID;
