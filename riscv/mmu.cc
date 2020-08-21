@@ -5,8 +5,8 @@
 #include "processor.h"
 #include "debug.h"
 
-mmu_t::mmu_t(simif_t* sim, processor_t* proc, page_owner_t *page_owners, size_t num_of_pages)
- : sim(sim), proc(proc), page_owners(page_owners), num_of_pages(num_of_pages),
+mmu_t::mmu_t(simif_t* sim, processor_t* proc, page_tag_t *tag_directory, size_t num_of_pages)
+ : sim(sim), proc(proc), tag_directory(tag_directory), num_of_pages(num_of_pages),
   check_triggers_fetch(false),
   check_triggers_load(false),
   check_triggers_store(false),
@@ -104,15 +104,15 @@ bool mmu_t::check_identifier(reg_t paddr, enclave_id_t id, bool load, enclave_id
   if(paddr >= DRAM_BASE && paddr < DRAM_BASE + PGSIZE*num_of_pages) {
     reg_t dram_offset = paddr - DRAM_BASE;
     reg_t page_num = dram_offset / PGSIZE;
-    if(load && id == page_owners[page_num].reader) {
+    if(load && id == tag_directory[page_num].reader) {
       if(writer_id == NULL) {
         printf("Checking identifier and wanting to set writer_id return value to true, but reader pointer is NULL.\n");
         exit(-5);
       }
-      *writer_id = page_owners[page_num].owner;
+      *writer_id = tag_directory[page_num].owner;
       return true;
     }
-    return id == page_owners[page_num].owner;
+    return id == tag_directory[page_num].owner;
   }
   return true;
 }
@@ -212,8 +212,8 @@ tlb_entry_t mmu_t::refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_
   if(paddr >= DRAM_BASE && paddr < DRAM_BASE + PGSIZE*num_of_pages) {
     reg_t dram_offset = paddr - DRAM_BASE;
     reg_t page_num = dram_offset / PGSIZE;
-    owner = page_owners[page_num].owner;
-    reader = page_owners[page_num].reader;
+    owner = tag_directory[page_num].owner;
+    reader = tag_directory[page_num].reader;
   }
   tlb_entry_t entry = {host_addr - vaddr, paddr - vaddr, owner, reader};
   tlb_data[idx] = entry;

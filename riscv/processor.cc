@@ -21,8 +21,8 @@
 #define STATE state
 
 processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
-        enclave_id_t e_id, page_owner_t *page_owners, size_t num_of_pages, struct Message_t *message, struct Message_t *allMessages, size_t num_of_messages, bool halt_on_reset)
-  : debug(false), halt_request(false), sim(sim), ext(NULL), id(id), page_owners(page_owners), num_of_pages(num_of_pages),
+        enclave_id_t e_id, page_tag_t *tag_directory, size_t num_of_pages, struct Message_t *message, struct Message_t *allMessages, size_t num_of_messages, bool halt_on_reset)
+  : debug(false), halt_request(false), sim(sim), ext(NULL), id(id), tag_directory(tag_directory), num_of_pages(num_of_pages),
   halt_on_reset(halt_on_reset), last_pc(1), executions(1)
 {
   enclave_id = e_id;
@@ -32,7 +32,7 @@ processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
   parse_isa_string(isa);
   register_base_instructions();
 
-  mmu = new mmu_t(sim, this, page_owners, num_of_pages);
+  mmu = new mmu_t(sim, this, tag_directory, num_of_pages);
 
   disassembler = new disassembler_t(max_xlen);
   if (ext)
@@ -561,26 +561,26 @@ void processor_t::set_csr(int which, reg_t val)
 #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
     case CSR_ENCLAVEASSIGNREADER:
       //least significant 16-bits are the enclave ID the rest is page number.
-      if(enclave_id == page_owners[val].owner) {//TODO check if val is not out of bounds
+      if(enclave_id == tag_directory[val].owner) {//TODO check if val is not out of bounds
 #ifdef PRAESIDIO_DEBUG
         fprintf(stderr, "processor.cc: Adding reader %lu to page %lu.\n", state.arg_enclave_id, val);
 #endif //PRAESIDIO_DEBUG
-        page_owners[val].reader = state.arg_enclave_id;
+        tag_directory[val].reader = state.arg_enclave_id;
       }
       else {
 #ifdef PRAESIDIO_DEBUG
-        fprintf(stderr, "proseccor.cc: WARNING failed to assign page %lu with reader %u, because owner is 0x%08x and you are 0x%08x.\n", val, state.arg_enclave_id, page_owners[val].owner, enclave_id);
+        fprintf(stderr, "proseccor.cc: WARNING failed to assign page %lu with reader %u, because owner is 0x%08x and you are 0x%08x.\n", val, state.arg_enclave_id, tag_directory[val].owner, enclave_id);
 #endif //PRAESIDIO_DEBUG
         mailbox->destination = ENCLAVE_INVALID_ID;
       }
       state.arg_enclave_id = ENCLAVE_INVALID_ID;
       break;
     case CSR_ENCLAVEDONATEPAGE:
-      if(enclave_id == page_owners[val].owner) {//TODO check if val is not out of bounds
+      if(enclave_id == tag_directory[val].owner) {//TODO check if val is not out of bounds
 #ifdef PRAESIDIO_DEBUG
         fprintf(stderr, "processor.cc: Donating page %lu to enclave %u\n", val, state.arg_enclave_id);
 #endif //PRAESIDIO_DEBUG
-        page_owners[val].owner = state.arg_enclave_id;
+        tag_directory[val].owner = state.arg_enclave_id;
       }
 #ifdef PRAESIDIO_DEBUG
       else {
@@ -616,7 +616,7 @@ void processor_t::set_csr(int which, reg_t val)
 #ifdef PRAESIDIO_DEBUG
           fprintf(stderr, "processor.cc: Changing page %d to tag: %lu\n", index, state.arg_enclave_id);
 #endif //PRAESIDIO_DEBUG
-          page_owners[index].owner = state.arg_enclave_id;
+          tag_directory[index].owner = state.arg_enclave_id;
         } else {
           //TODO enable tagging for pages in boot ROM and management pages.
 #ifdef PRAESIDIO_DEBUG

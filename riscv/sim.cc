@@ -93,11 +93,11 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
 
   unaccounted_for_steps = 0;
 
-  page_owners = new page_owner_t[num_of_pages];
+  tag_directory = new page_tag_t[num_of_pages];
   for(reg_t i = 0; i < num_of_pages; i++)
   {
-    page_owners[i].owner = ENCLAVE_DEFAULT_ID;
-    page_owners[i].reader = ENCLAVE_INVALID_ID;
+    tag_directory[i].owner = ENCLAVE_DEFAULT_ID;
+    tag_directory[i].reader = ENCLAVE_INVALID_ID;
   }
 
   for (auto& x : mems)
@@ -105,18 +105,18 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
 
   debug_module.add_device(&bus);
 
-  debug_mmu = new mmu_t(this, NULL, page_owners, num_of_pages);
+  debug_mmu = new mmu_t(this, NULL, tag_directory, num_of_pages);
 
   if (hartids.size() == 0)
   { //TODO add the mailbox slots to the processor_t constructor.
     for (size_t i = 0; i < procs.size() - nenclaves; i++)
     {
-      procs[i] = new processor_t(isa, this, i, ENCLAVE_DEFAULT_ID, page_owners, num_of_pages, &mailboxes[0], mailboxes, num_of_mailboxes, halted);
+      procs[i] = new processor_t(isa, this, i, ENCLAVE_DEFAULT_ID, tag_directory, num_of_pages, &mailboxes[0], mailboxes, num_of_mailboxes, halted);
     }
     enclave_id_t current_id = 1;
     for (size_t i = procs.size() - nenclaves; i < procs.size(); i++)
     {
-      procs[i] = new processor_t(isa, this, i, current_id, page_owners, num_of_pages, &mailboxes[current_id], mailboxes, num_of_mailboxes, halted);
+      procs[i] = new processor_t(isa, this, i, current_id, tag_directory, num_of_pages, &mailboxes[current_id], mailboxes, num_of_mailboxes, halted);
       current_id += 1;
     }
   }
@@ -127,10 +127,6 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
       std::cerr << "Number of specified hartids doesn't match number of processors or you specified both hardids and enclaves" << strerror(errno) << std::endl;
       exit(1);
     }
-    //for (size_t i = 0; i < procs.size(); i++)
-    //{
-    //  procs[i] = new processor_t(isa, this, ENCLAVE_DEFAULT_ID, hartids[i], page_owners, num_of_pages, &mailboxes[0], num_of_mailboxes, halted);
-    //}
   }
 
   clint.reset(new clint_t(procs));

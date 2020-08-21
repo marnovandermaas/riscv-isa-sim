@@ -57,7 +57,7 @@ class mmu_t
 private:
   bool check_identifier(reg_t paddr, enclave_id_t id, bool load, enclave_id_t *writer_id = NULL);
 public:
-  mmu_t(simif_t* sim, processor_t* proc, page_owner_t *page_owners, size_t num_pages);
+  mmu_t(simif_t* sim, processor_t* proc, page_tag_t *tag_directory, size_t num_pages);
   ~mmu_t();
 
   inline reg_t misaligned_load(reg_t addr, size_t size, enclave_id_t enclave_id)
@@ -325,7 +325,7 @@ private:
   memtracer_list_t tracer;
   reg_t load_reservation_address;
   uint16_t fetch_temp;
-  page_owner_t *page_owners;
+  page_tag_t *tag_directory;
   size_t num_of_pages;
 
   // implement an instruction cache for simulator performance

@@ -172,7 +172,7 @@ static int cto(reg_t val)
 class processor_t : public abstract_device_t
 {
 public:
-  processor_t(const char* isa, simif_t* sim, uint32_t id, enclave_id_t e_id, page_owner_t *page_owners, size_t num_of_pages, struct Message_t *message, struct Message_t *allMessages, size_t num_of_messages, bool halt_on_reset=false);
+  processor_t(const char* isa, simif_t* sim, uint32_t id, enclave_id_t e_id, page_tag_t *tag_directory, size_t num_of_pages, struct Message_t *message, struct Message_t *allMessages, size_t num_of_messages, bool halt_on_reset=false);
   ~processor_t();
 
   enclave_id_t get_enclave_id() {return enclave_id;};
@@ -320,7 +320,7 @@ private:
   std::string isa_string;
   bool histogram_enabled;
 
-  page_owner_t *page_owners;
+  page_tag_t *tag_directory;
   size_t num_of_pages;
 
   struct Message_t *mailbox;

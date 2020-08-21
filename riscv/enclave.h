@@ -6,7 +6,7 @@
 
 #define NUM_OF_ENCLAVE_PAGES 3
 
-struct page_owner_t
+struct page_tag_t
 {
   enclave_id_t owner = ENCLAVE_DEFAULT_ID;
   enclave_id_t reader = ENCLAVE_INVALID_ID;
