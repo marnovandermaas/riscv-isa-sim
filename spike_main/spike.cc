@@ -63,7 +63,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
 
 #ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
     if (num_enclaves > 0) {
-      num_mems = 2;
+      num_mems = 3; //DRAM, management shim and mailboxes
     }
 #endif
 #ifdef PRAESIDIO_DEBUG
@@ -103,6 +103,18 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
       //fprintf(stderr, "spike.cc: size 0x%lx, original size 0x%x, num enclaves 0x%lx at base: 0x%lx\n", management_memory_size, MANAGEMENT_ENCLAVE_SIZE, num_enclaves, MANAGEMENT_ENCLAVE_BASE);
       memory_vector[1] = std::make_pair(reg_t(MANAGEMENT_ENCLAVE_BASE), new mem_t(management_memory_size, file_size, management_array));
       free(management_array);
+
+      size_t mailbox_size = sizeof(struct Message_t)*(num_enclaves + 1);
+      int *mb_init = (int *) malloc(MAILBOX_SIZE);
+      for(unsigned int i = 0; i < MAILBOX_SIZE / (sizeof(int)); i++) {
+        mb_init[i] = -1;
+      }
+      //Round the size up to the nearest page
+      if(mailbox_size > MAILBOX_SIZE) {
+        fprintf(stderr, "spike.cc: ERROR mailbox size bigger than the memory.\n");
+        exit(-2);
+      }
+      memory_vector[2] = std::make_pair(reg_t(MAILBOX_BASE), new mem_t(MAILBOX_SIZE, (size_t) PGSIZE, (char *) mb_init));
     }
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
 #ifdef PRAESIDIO_DEBUG
@@ -306,18 +318,9 @@ int main(int argc, char** argv)
     }
   }
 
-
-  size_t num_of_mailboxes = nenclaves + 1;
-  struct Message_t mailboxes[num_of_mailboxes]; //One mailbox per enclave including one for the normal world
-  for(size_t i = 0; i < num_of_mailboxes; i++) {
-    mailboxes[i].source = ENCLAVE_INVALID_ID;
-    mailboxes[i].destination = ENCLAVE_INVALID_ID;
-    mailboxes[i].content = 0;
-  }
-
   sim_t s(isa, nprocs + nenclaves, nenclaves, halted, start_pc, mems, htif_args, std::move(hartids),
       progsize, max_bus_master_bits, require_authentication, ics_arg, dcs_arg, &*l2, rmts_arg,
-      static_llc_arg, mailboxes, num_of_mailboxes, num_of_pages, fopen("stats.log", "w"));
+      static_llc_arg, num_of_pages, fopen("stats.log", "w"));
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(new jtag_dtm_t(&s.debug_module));
   if (use_rbb) {

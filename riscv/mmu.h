@@ -83,7 +83,7 @@ public:
   }
 
   // template for functions that load an aligned value from memory
-  #define load_func(type) \
+  /*#define load_func(type) \
     inline type##_t load_##type(reg_t addr, enclave_id_t enclave_id) { \
       if (unlikely(addr & (sizeof(type##_t)-1))) \
         return misaligned_load(addr, sizeof(type##_t), enclave_id); \
@@ -111,7 +111,11 @@ public:
         ) { \
           return data; \
         } \
-      } \
+      }*/
+  #define load_func(type) \
+    inline type##_t load_##type(reg_t addr, enclave_id_t enclave_id) { \
+      if (unlikely(addr & (sizeof(type##_t)-1))) \
+        return misaligned_load(addr, sizeof(type##_t), enclave_id); \
       type##_t res; \
       load_slow_path(addr, sizeof(type##_t), (uint8_t*)&res, enclave_id); \
       return res; \
@@ -130,7 +134,7 @@ public:
   load_func(int64)
 
   // template for functions that store an aligned value to memory
-  #define store_func(type) \
+  /*#define store_func(type) \
     void store_##type(reg_t addr, type##_t val, enclave_id_t enclave_id) { \
       if (unlikely(addr & (sizeof(type##_t)-1))) \
         return misaligned_store(addr, val, sizeof(type##_t), enclave_id); \
@@ -158,7 +162,11 @@ public:
           *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = val; \
           return; \
         } \
-      } \
+      }*/
+  #define store_func(type) \
+    void store_##type(reg_t addr, type##_t val, enclave_id_t enclave_id) { \
+      if (unlikely(addr & (sizeof(type##_t)-1))) \
+        return misaligned_store(addr, val, sizeof(type##_t), enclave_id); \
       store_slow_path(addr, sizeof(type##_t), (const uint8_t*)&val, enclave_id); \
     }
 

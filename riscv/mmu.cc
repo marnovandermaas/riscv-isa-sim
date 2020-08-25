@@ -124,6 +124,27 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t e
   if (auto host_addr = sim->addr_to_mem(paddr)) {
     if(check_identifier(paddr, enclave_id, true, &writer_id)) {
       memcpy(bytes, host_addr, len);
+      if((paddr >= MAILBOX_BASE) && (paddr < MAILBOX_BASE + MAILBOX_SIZE)) {
+        if(((paddr - MAILBOX_BASE) % (sizeof(struct Message_t))) == 0) { //We assume that type is the first element of the mailbox. We will invalidate the message if the correct enclave is reading it.
+          struct Message_t *mailbox = (struct Message_t *) sim->addr_to_mem(paddr);
+          if(mailbox->type != MSG_INVALID && mailbox->destination == enclave_id) {
+#ifdef PRAESIDIO_DEBUG
+            fprintf(stderr, "mmu.cc: Invalidating message for enclave 0x%x and address %016lx with type 0x%x, source 0x%x, dest 0x%x\n", enclave_id, paddr, mailbox->type, mailbox->source, mailbox->destination);
+#endif
+            mailbox->type = MSG_INVALID;
+          }
+// #ifdef PRAESIDIO_DEBUG
+//           else {
+//             fprintf(stderr, "mmu.cc: Message read by 0x%x at address %016lx has type 0x%x and destination 0x%x\n", enclave_id, paddr, mailbox->type, mailbox->destination);
+//           }
+// #endif
+        }
+// #ifdef PRAESIDIO_DEBUG
+//         else {
+//           fprintf(stderr, "mmu.cc: Reading mailbox address %016lx with enclave 0x%x\n", paddr, enclave_id);
+//         }
+// #endif
+      }
       if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD)) {
         trace_result resultOfTrace = tracer.trace(paddr, len, LOAD);
         if(resultOfTrace == LLC_MISS) {
@@ -167,10 +188,34 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
     if (matched_trigger)
       throw *matched_trigger;
   }
+  if((paddr >= MAILBOX_BASE) && (paddr < MAILBOX_BASE + MAILBOX_SIZE)) {
+    if((paddr - (reg_t) MAILBOX_BASE) > sizeof(struct Message_t)) {
+      fprintf(stderr, "mmu.cc: writing out of mailbox bounds.\n");
+      throw trap_store_access_fault(addr);
+    }
+    paddr += (sizeof(struct Message_t)) * (proc->id);
+#ifdef PRAESIDIO_DEBUG
+    fprintf(stderr, "mmu.cc: enclave 0x%x writing to mailbox address 0x%016lx\nmmu.cc: Content of mailboxes:", enclave_id, paddr);
+    for(unsigned int i = 0; i < 4*sizeof(struct Message_t)/4; i++) {
+      if(i%8 == 0) {
+        fprintf(stderr, "\nmmu.cc: ");
+      }
+      fprintf(stderr, "%08x ", ((int *) sim->addr_to_mem(MAILBOX_BASE))[i]);
+    }
+    fprintf(stderr, "\n");
+#endif
+  }
 
   if (auto host_addr = sim->addr_to_mem(paddr)) {
     if(check_identifier(paddr, enclave_id, false)) {
       memcpy(host_addr, bytes, len);
+      if((paddr >= MAILBOX_BASE) && (paddr < MAILBOX_BASE + MAILBOX_SIZE)) {
+        struct Message_t *mailbox = (struct Message_t *) sim->addr_to_mem(MAILBOX_BASE + (sizeof(struct Message_t)) * (proc->id));
+        mailbox->source = enclave_id; //Make sure the source is always the correct enclave identifier.
+#ifdef PRAESIDIO_DEBUG
+        fprintf(stderr, "mmu.cc: setting the source to 0x%x of mailbox 0x%016lx\n", enclave_id, paddr);
+#endif
+      }
       if (tracer.interested_in_range(paddr, paddr + PGSIZE, STORE))
         tracer.trace(paddr, len, STORE); //TODO should tracer know about an unauthorized store?
       else
