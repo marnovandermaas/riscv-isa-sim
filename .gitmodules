@@ -1,3 +1,3 @@
 [submodule "praesidio-software"]
 	path = praesidio-software
-	url = git@github.com:marnovandermaas/praesidio-software.git
+	url = https://github.com/marnovandermaas/praesidio-software.git
