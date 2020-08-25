@@ -126,7 +126,7 @@ struct state_t
 
   //Register to contain the identifier for enclave page communication system type instructions
 #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-  reg_t arg_enclave_id;
+  enclave_id_t arg_enclave_id;
 #endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
 #ifdef COVERT_CHANNEL_POC
   reg_t llc_miss_count;

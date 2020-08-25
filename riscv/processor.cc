@@ -563,30 +563,16 @@ void processor_t::set_csr(int which, reg_t val)
       //least significant 16-bits are the enclave ID the rest is page number.
       if(enclave_id == tag_directory[val].owner) {//TODO check if val is not out of bounds
 #ifdef PRAESIDIO_DEBUG
-        fprintf(stderr, "processor.cc: Adding reader %lu to page %lu.\n", state.arg_enclave_id, val);
+        fprintf(stderr, "processor.cc: Adding reader %u to page %lu.\n", state.arg_enclave_id, val);
 #endif //PRAESIDIO_DEBUG
         tag_directory[val].reader = state.arg_enclave_id;
       }
-      else {
 #ifdef PRAESIDIO_DEBUG
+      else {
         fprintf(stderr, "proseccor.cc: WARNING failed to assign page %lu with reader %u, because owner is 0x%08x and you are 0x%08x.\n", val, state.arg_enclave_id, tag_directory[val].owner, enclave_id);
-#endif //PRAESIDIO_DEBUG
-        mailbox->destination = ENCLAVE_INVALID_ID;
       }
+#endif //PRAESIDIO_DEBUG
       state.arg_enclave_id = ENCLAVE_INVALID_ID;
-      break;
-    case CSR_ENCLAVEDONATEPAGE:
-      if(enclave_id == tag_directory[val].owner) {//TODO check if val is not out of bounds
-#ifdef PRAESIDIO_DEBUG
-        fprintf(stderr, "processor.cc: Donating page %lu to enclave %u\n", val, state.arg_enclave_id);
-#endif //PRAESIDIO_DEBUG
-        tag_directory[val].owner = state.arg_enclave_id;
-      }
-#ifdef PRAESIDIO_DEBUG
-      else {
-        fprintf(stderr, "proseccor.cc: WARNING failed to donate page because you don't own it.\n");
-      }
-#endif //PRAESIDIO_DEBUG
       break;
     case CSR_ENCLAVESETARGID:
       state.arg_enclave_id = val;
@@ -614,7 +600,7 @@ void processor_t::set_csr(int which, reg_t val)
         if(val & DRAM_BASE) {
           int index = (val & (DRAM_BASE - 1)) / PGSIZE; //Assume DRAM_BASE is just one set bit.
 #ifdef PRAESIDIO_DEBUG
-          fprintf(stderr, "processor.cc: Changing page %d to tag: %lu\n", index, state.arg_enclave_id);
+          fprintf(stderr, "processor.cc: Changing page %d to tag: %u\n", index, state.arg_enclave_id);
 #endif //PRAESIDIO_DEBUG
           tag_directory[index].owner = state.arg_enclave_id;
         } else {
@@ -624,14 +610,6 @@ void processor_t::set_csr(int which, reg_t val)
 #endif //PRAESIDIO_DEBUG
         }
       }
-      break;
-    case CSR_MANAGESENDMESSAGE:
-      mailbox->source = enclave_id;
-      mailbox->destination = state.arg_enclave_id;
-      mailbox->content = val;
-#ifdef PRAESIDIO_DEBUG
-      fprintf(stderr, "processor.cc: core %u sending mailbox message: source 0x%08x, destination 0x%08x, content 0x%016lx\n", id, mailbox->source, mailbox->destination, mailbox->content);
-#endif //PRAESIDIO_DEBUG
       break;
 #endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
 #ifdef COVERT_CHANNEL_POC
@@ -675,7 +653,7 @@ reg_t processor_t::get_csr(int which)
 #endif //BARE_METAL_OUTPUT_CSR
 
 #ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-  if (which == CSR_ENCLAVEASSIGNREADER || which == CSR_ENCLAVEDONATEPAGE)
+  if (which == CSR_ENCLAVEASSIGNREADER)
   {
     return 0;
   }
@@ -689,26 +667,8 @@ reg_t processor_t::get_csr(int which)
   {
     return enclave_id;
   }
-  if (which == CSR_MANAGECHANGEPAGETAG || which == CSR_MANAGESENDMESSAGE)
+  if (which == CSR_MANAGECHANGEPAGETAG)
   {
-    return 0;
-  }
-  if (which == CSR_MANAGERECEIVEMESSAGE)
-  {
-    //TODO make this count as an LLC miss.
-    for(size_t i = 0; i < num_of_mailboxes; i++) { //This should be done in parallel in hardware
-      struct Message_t *message = &allMailboxes[i];
-      if(message->destination == enclave_id) {
-#ifdef PRAESIDIO_DEBUG
-        fprintf(stderr, "processor.cc: core %u at pc 0x%016lx found messages in box %lu, with message: source 0x%08x, destination 0x%08x, content 0x%016lx\n", id, state.pc, i, message->source, message->destination, message->content);
-#endif //PRAESIDIO_DEBUG
-        state.arg_enclave_id = message->source; //TODO this is a security problem.
-        message->destination = ENCLAVE_INVALID_ID;
-        message->source = ENCLAVE_INVALID_ID;
-        return message->content;
-      }
-    }
-    state.arg_enclave_id = ENCLAVE_INVALID_ID;
     return 0;
   }
 #endif // MANAGEMENT_ENCLAVE_INSTRUCTIONS
