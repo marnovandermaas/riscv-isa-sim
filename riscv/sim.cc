@@ -309,13 +309,6 @@ void sim_t::make_dtb()
     enclave_vec[i + 1] = procs.size() - nenclaves + i; //This statement assumes all ids are from 0..procs.size()-1
   }
 
-// #ifdef PRAESIDIO_DEBUG
-//   fprintf(stderr, "sim.cc: reset vector contents.\n");
-//   for(size_t i = 0; i < reset_vec_size + nenclaves + 1; i++) {
-//     fprintf(stderr, "sim.cc: 0x%08x,\n", reset_vec[i]);
-//   }
-// #endif
-
   std::vector<char> rom((char*)reset_vec, (char*)reset_vec + sizeof(reset_vec));
 
   dts = make_dts(INSNS_PER_RTC_TICK, CPU_HZ, procs, mems, nenclaves);

@@ -395,6 +395,8 @@ int main(int argc, char** argv)
   s.set_log(log);
   s.set_histogram(histogram);
 #ifdef PRAESIDIO_DEBUG
+  struct Message_t msg;
+  printf("spike.cc: message size is %lu bytes, type offset %ld, type size %lu\n", sizeof(struct Message_t), (long) ((long) &msg.type - (long) &msg), sizeof(enum MessageType_t));
   fprintf(stderr, "spike.cc: starting simulation.\n");
 #endif
   return s.run();

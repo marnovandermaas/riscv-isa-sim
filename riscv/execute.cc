@@ -180,6 +180,9 @@ void processor_t::step(size_t n)
         // corresponding to the instruction.
         auto ic_entry = _mmu->access_icache(pc, enclave_id);
         if(ic_entry == NULL) {
+#ifdef PRAESIDIO_DEBUG
+          fprintf(stderr, "execute.cc: throwing trap becuase instruction not found at pc 0x%016lx\n", pc);
+#endif
           throw trap_illegal_instruction(0);
         }
 

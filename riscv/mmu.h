@@ -301,6 +301,9 @@ public:
     if(refill_icache(addr, &entry, enclave_id)) {
       return entry.data;
     }
+#ifdef PRAESIDIO_DEBUG
+    fprintf(stderr, "mmu.h: throwing illegal instructions at address 0x%016lx.\n", addr);
+#endif
     throw trap_illegal_instruction(0);
   }
 
