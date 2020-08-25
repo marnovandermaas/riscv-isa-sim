@@ -575,10 +575,10 @@ void processor_t::set_csr(int which, reg_t val)
       state.arg_enclave_id = val;
       break;
 #endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#ifdef MANAGEMENT_SHIM_INSTRUCTIONS
     case CSR_MANAGEENCLAVEID:
       //This instruction should only succeed if the pc is in within the management enclave.
-      if ((state.pc >= MANAGEMENT_ENCLAVE_BASE) && (state.pc < MANAGEMENT_ENCLAVE_BASE + MANAGEMENT_ENCLAVE_SIZE))
+      if ((state.pc >= MANAGEMENT_SHIM_BASE) && (state.pc < MANAGEMENT_SHIM_BASE + MANAGEMENT_SHIM_SIZE))
       {
 #ifdef PRAESIDIO_DEBUG
         fprintf(stderr, "processor.cc: Enclave ID on core %u changed to 0x%lx\n", id, val);
@@ -608,7 +608,7 @@ void processor_t::set_csr(int which, reg_t val)
         }
       }
       break;
-#endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#endif //MANAGEMENT_SHIM_INSTRUCTIONS
 #ifdef COVERT_CHANNEL_POC
     case CSR_LLCMISSCOUNT:
       state.llc_miss_count++;
@@ -659,7 +659,7 @@ reg_t processor_t::get_csr(int which)
   }
 #endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
 
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#ifdef MANAGEMENT_SHIM_INSTRUCTIONS
   if (which == CSR_MANAGEENCLAVEID)
   {
     return enclave_id;
@@ -668,7 +668,7 @@ reg_t processor_t::get_csr(int which)
   {
     return 0;
   }
-#endif // MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#endif // MANAGEMENT_SHIM_INSTRUCTIONS
 
 #ifdef COVERT_CHANNEL_POC
   if (which == CSR_LLCMISSCOUNT) {

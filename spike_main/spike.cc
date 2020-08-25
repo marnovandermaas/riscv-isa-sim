@@ -61,7 +61,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
     if ((size % PGSIZE) != 0) *num_of_pages++;
     int num_mems = 1;
 
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#ifdef MANAGEMENT_SHIM_INSTRUCTIONS
     if (num_enclaves > 0) {
       num_mems = 3; //DRAM, management shim and mailboxes
     }
@@ -71,7 +71,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
 #endif
     std::vector<std::pair<reg_t, mem_t*>> memory_vector = std::vector<std::pair<reg_t, mem_t*>>(num_mems, std::make_pair(reg_t(0), (mem_t *) NULL));
 
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#ifdef MANAGEMENT_SHIM_INSTRUCTIONS
     if (num_enclaves > 0) {
       //This initializes the memory enclave memory device (4 pages in size for now)
       FILE *management_file;
@@ -99,9 +99,8 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
         }
       }
       //TODO make these extra pages be local per processor.
-      size_t management_memory_size = MANAGEMENT_ENCLAVE_SIZE + PGSIZE*num_enclaves; //We need to add extra pages for the stacks of the management code.
-      //fprintf(stderr, "spike.cc: size 0x%lx, original size 0x%x, num enclaves 0x%lx at base: 0x%lx\n", management_memory_size, MANAGEMENT_ENCLAVE_SIZE, num_enclaves, MANAGEMENT_ENCLAVE_BASE);
-      memory_vector[1] = std::make_pair(reg_t(MANAGEMENT_ENCLAVE_BASE), new mem_t(management_memory_size, file_size, management_array));
+      size_t management_memory_size = MANAGEMENT_SHIM_SIZE + PGSIZE*num_enclaves; //We need to add extra pages for the stacks of the management code.
+      memory_vector[1] = std::make_pair(reg_t(MANAGEMENT_SHIM_BASE), new mem_t(management_memory_size, file_size, management_array));
       free(management_array);
 
       size_t mailbox_size = sizeof(struct Message_t)*(num_enclaves + 1);
@@ -116,7 +115,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
       }
       memory_vector[2] = std::make_pair(reg_t(MAILBOX_BASE), new mem_t(MAILBOX_SIZE, (size_t) PGSIZE, (char *) mb_init));
     }
-#endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#endif //MANAGEMENT_SHIM_INSTRUCTIONS
 #ifdef PRAESIDIO_DEBUG
     fprintf(stderr, "spike.cc: making working memory at base: 0x%0x\n", DRAM_BASE);
 #endif //PRAESIDIO_DEBUG
@@ -193,9 +192,9 @@ int main(int argc, char** argv)
   parser.help(&help);
   parser.option(0, "enclave", 1, [&](const char* s){
     nenclaves = atoi(s);
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#ifdef MANAGEMENT_SHIM_INSTRUCTIONS
     nenclaves += 1; //TODO remove the plus one and make sure that the first enclave core is not just reserved for management stuff.i
-#endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#endif //MANAGEMENT_SHIM_INSTRUCTIONS
   });
   parser.option(0, "manage-path", 1, [&](const char* s){strncpy(manage_path, s, 1024);});
   parser.option('h', 0, 0, [&](const char* s){help();});

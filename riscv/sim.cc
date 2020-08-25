@@ -276,12 +276,12 @@ void sim_t::make_dtb()
 
   if(start_pc == reg_t(-1)) {
     start_pc = get_entry_point(); //This is the get_entry_point function of htif_t found in riscv fesvr
-#ifdef MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#ifdef MANAGEMENT_SHIM_INSTRUCTIONS
     //TODO add the entry point to the management enclave code instead of hardcoding it.
     if(nenclaves > 0) {
-      start_pc = MANAGEMENT_ENCLAVE_BASE;
+      start_pc = MANAGEMENT_SHIM_BASE;
     }
-#endif //MANAGEMENT_ENCLAVE_INSTRUCTIONS
+#endif //MANAGEMENT_SHIM_INSTRUCTIONS
   }
 #ifdef PRAESIDIO_DEBUG
   fprintf(stderr, "sim.cc: Adding boot rom with start_pc %016lx\n", start_pc);
