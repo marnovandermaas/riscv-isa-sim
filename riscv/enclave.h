@@ -1,3 +1,6 @@
+// See LICENSE for license details.
+// Copyright 2018-2020 Marno van der Maas
+
 #ifndef _RISCV_ENCLAVE_H
 #define _RISCV_ENCLAVE_H
 

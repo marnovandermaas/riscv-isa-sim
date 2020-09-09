@@ -1,3 +1,6 @@
+// See LICENSE for license details.
+// Copyright 2018-2020 Marno van der Maas
+
 #include "devices.h"
 #include "debug.h"
 

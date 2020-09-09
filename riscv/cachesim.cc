@@ -1,4 +1,5 @@
 // See LICENSE for license details.
+// Copyright 2018-2020 Marno van der Maas
 
 #include "cachesim.h"
 #include "common.h"

@@ -1,4 +1,6 @@
 // See LICENSE for license details.
+// Copyright 2018-2020 Marno van der Maas
+
 #ifndef _RISCV_PROCESSOR_H
 #define _RISCV_PROCESSOR_H
 

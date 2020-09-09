@@ -1,4 +1,5 @@
 // See LICENSE for license details.
+// Copyright 2018-2020 Marno van der Maas
 
 #ifndef _RISCV_CACHE_SIM_H
 #define _RISCV_CACHE_SIM_H
