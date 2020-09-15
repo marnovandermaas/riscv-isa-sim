@@ -3,7 +3,7 @@ Author: Marno van der Maas
 
 Year: 2020
 
-This simulator is part of a workshop paper that turns side channels into direct channels. For the original Spike readme, please see [Spike_README](Spike_README.md)
+For the original Spike readme, please see [Spike_README](Spike_README.md)
 
 ## Building
 This process has been tested on Ubuntu 18.04.
