@@ -94,21 +94,20 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
 
   unaccounted_for_steps = 0;
 
-  if(num_of_pages > MAX_TAGGED_PAGES) {
-    fprintf(stderr, "sim.cc: WARNING number of tagged pages beyond %d is not supported.\n", MAX_TAGGED_PAGES);
-    num_of_pages = MAX_TAGGED_PAGES;
-  }
-  tag_directory = new page_tag_t[num_of_pages];
-  for(reg_t i = 0; i < num_of_pages; i++)
-  {
-    tag_directory[i].owner = ENCLAVE_DEFAULT_ID;
-    tag_directory[i].reader = ENCLAVE_INVALID_ID;
-  }
-
   for (auto& x : mems)
     bus.add_device(x.first, x.second);
 
   debug_module.add_device(&bus);
+
+  if(num_of_pages > MAX_TAGGED_PAGES) {
+    fprintf(stderr, "sim.cc: WARNING number of tagged pages beyond %d is not supported.\n", MAX_TAGGED_PAGES);
+    num_of_pages = MAX_TAGGED_PAGES;
+  }
+  tag_directory = (page_tag_t *) addr_to_mem(TAGDIRECTORY_BASE);
+  if(tag_directory == NULL) {
+    fprintf(stderr, "sim.cc: ERROR tag directory cannot be found.\n");
+    exit(-7);
+  }
 
   debug_mmu = new mmu_t(this, NULL, tag_directory, num_of_pages);
 

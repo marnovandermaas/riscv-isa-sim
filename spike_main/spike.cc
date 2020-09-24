@@ -120,7 +120,8 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
         fprintf(stderr, "spike.cc: ERROR mailbox size bigger than the memory.\n");
         exit(-2);
       }
-      memory_vector[2] = std::make_pair(reg_t(MAILBOX_BASE), new mem_t(mailbox_size, mailbox_size, (char *) mb_init));
+      memory_vector[2] = std::make_pair(reg_t(MAILBOX_BASE), new mem_t(MAILBOX_SIZE, mailbox_size, (char *) mb_init));
+      free(mb_init);
 
       size_t number_of_tags = *num_of_pages > MAX_TAGGED_PAGES ? MAX_TAGGED_PAGES : *num_of_pages;
       size_t tag_directory_size = sizeof(page_tag_t)*(number_of_tags);
@@ -139,6 +140,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
         exit(-4);
       }
       memory_vector[3] = std::make_pair(reg_t(TAGDIRECTORY_BASE), new mem_t(tag_directory_size, tag_directory_size,  (char *) td_init));
+      free(td_init);
     }
 #endif //MANAGEMENT_SHIM_INSTRUCTIONS
 #ifdef PRAESIDIO_DEBUG

@@ -55,6 +55,15 @@ tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr, enclave_id_t enclave_id)
   reg_t paddr = translate(vaddr, FETCH);
   auto host_addr = sim->addr_to_mem(paddr);
   if (host_addr) {
+    if(
+      ((paddr >= MAILBOX_BASE) && (paddr < MAILBOX_BASE + MAILBOX_SIZE)) ||
+      ((paddr >= TAGDIRECTORY_BASE) && (paddr < TAGDIRECTORY_BASE + TAGDIRECTORY_SIZE))
+    ) {
+#ifdef PRAESIDIO_DEBUG
+      fprintf(stderr, "mmu.cc: Warning! cannot fetch instructions from mailbox or tag directory addresses.\n");
+#endif
+      throw trap_instruction_access_fault(vaddr);
+    }
     if(check_identifier(paddr, enclave_id, true)) {
       return refill_tlb(vaddr, paddr, host_addr, FETCH);
     } else {
@@ -102,6 +111,12 @@ reg_t reg_from_bytes(size_t len, const uint8_t* bytes)
 }
 
 bool mmu_t::check_identifier(reg_t paddr, enclave_id_t id, bool load, enclave_id_t* writer_id) {
+#ifdef PRAESIDIO_DEBUG
+  if(tag_directory == NULL) {
+    fprintf(stderr, "mmu.cc: quiting because tag directory is null\n");
+    exit(-11);
+  }
+#endif
   if(paddr >= DRAM_BASE && paddr < DRAM_BASE + PGSIZE*num_of_pages) {
     reg_t dram_offset = paddr - DRAM_BASE;
     reg_t page_num = dram_offset / PGSIZE;
@@ -123,6 +138,12 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, enclave_id_t e
   enclave_id_t writer_id = ENCLAVE_INVALID_ID;
   reg_t paddr = translate(addr, LOAD);
   if (auto host_addr = sim->addr_to_mem(paddr)) {
+    if((paddr >= TAGDIRECTORY_BASE) && (paddr < TAGDIRECTORY_BASE + TAGDIRECTORY_SIZE)) {
+#ifdef PRAESIDIO_DEBUG
+      fprintf(stderr, "mmu.cc: loading from the tag directory is not allowed.\n");
+#endif
+      throw trap_load_access_fault(addr);
+    }
     if(check_identifier(paddr, enclave_id, true, &writer_id)) {
       memcpy(bytes, host_addr, len);
       if((paddr >= MAILBOX_BASE) && (paddr < MAILBOX_BASE + MAILBOX_SIZE)) {
@@ -209,6 +230,38 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
 
   if (auto host_addr = sim->addr_to_mem(paddr)) {
     if(check_identifier(paddr, enclave_id, false)) {
+      if((paddr >= TAGDIRECTORY_BASE) && (paddr < TAGDIRECTORY_BASE + TAGDIRECTORY_SIZE)) {
+        if(enclave_id != ENCLAVE_MANAGEMENT_ID) {
+          size_t id_offset = (paddr - TAGDIRECTORY_BASE) / sizeof(enclave_id_t);
+          if((paddr - TAGDIRECTORY_BASE) % sizeof(enclave_id_t)) {
+#ifdef PRAESIDIO_DEBUG
+            fprintf(stderr, "mmu.cc: trying to do a misaligned store to tag directory while not management shim.\n");
+#endif
+            throw trap_store_access_fault(addr);
+          }
+          if((id_offset % 2) == 0) {
+            //Only the management shim is allowed to write to owner identifiers
+#ifdef PRAESIDIO_DEBUG
+            fprintf(stderr, "mmu.cc: trying to store to owner in tag directory while not management shim.\n");
+#endif
+            throw trap_store_access_fault(addr);
+          } else {
+            if(len != sizeof(enclave_id_t)) {
+#ifdef PRAESIDIO_DEBUG
+              fprintf(stderr, "mmu.cc: trying to write more or less than 32-bits in reader field of tag directory.\n");
+#endif
+              throw trap_store_access_fault(addr);
+            }
+            size_t entry_offset = (paddr - TAGDIRECTORY_BASE) / sizeof(page_tag_t);
+            if(tag_directory[entry_offset].owner != enclave_id) {
+#ifdef PRAESIDIO_DEBUG
+              fprintf(stderr, "mmu.cc: trying to set reader in tag directory while not being the owner.\n");
+#endif
+              throw trap_store_access_fault(addr);
+            }
+          }
+        }
+      }
       memcpy(host_addr, bytes, len);
       if((paddr >= MAILBOX_BASE) && (paddr < MAILBOX_BASE + MAILBOX_SIZE)) {
         struct Message_t *mailbox = (struct Message_t *) sim->addr_to_mem(MAILBOX_BASE + (sizeof(struct Message_t)) * (proc->id));
