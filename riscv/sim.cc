@@ -96,7 +96,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
 
   if(num_of_pages > MAX_TAGGED_PAGES) {
     fprintf(stderr, "sim.cc: WARNING number of tagged pages beyond %d is not supported.\n", MAX_TAGGED_PAGES);
-    num_of_page = MAX_TAGGED_PAGES;
+    num_of_pages = MAX_TAGGED_PAGES;
   }
   tag_directory = new page_tag_t[num_of_pages];
   for(reg_t i = 0; i < num_of_pages; i++)

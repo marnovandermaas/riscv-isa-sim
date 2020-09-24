@@ -66,7 +66,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
 
 #ifdef MANAGEMENT_SHIM_INSTRUCTIONS
     if (num_enclaves > 0) {
-      num_mems = 3; //DRAM, management shim and mailboxes
+      num_mems = 4; //DRAM, management shim, mailboxes and tag directory
     }
 #endif
 #ifdef PRAESIDIO_DEBUG
@@ -103,6 +103,10 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
       }
       //TODO make these extra pages be local per processor.
       size_t management_memory_size = MANAGEMENT_SHIM_SIZE + PGSIZE*num_enclaves; //We need to add extra pages for the stacks of the management code.
+      if(management_memory_size > MAX_MANAGMENT_SHIM_SIZE) {
+        fprintf(stderr, "spike.cc: management shim is too large to fit in allocated memory.\n");
+        exit(-101);
+      }
       memory_vector[1] = std::make_pair(reg_t(MANAGEMENT_SHIM_BASE), new mem_t(management_memory_size, file_size, management_array));
       free(management_array);
 
@@ -116,7 +120,25 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
         fprintf(stderr, "spike.cc: ERROR mailbox size bigger than the memory.\n");
         exit(-2);
       }
-      memory_vector[2] = std::make_pair(reg_t(MAILBOX_BASE), new mem_t(MAILBOX_SIZE, (size_t) PGSIZE, (char *) mb_init));
+      memory_vector[2] = std::make_pair(reg_t(MAILBOX_BASE), new mem_t(mailbox_size, mailbox_size, (char *) mb_init));
+
+      size_t number_of_tags = *num_of_pages > MAX_TAGGED_PAGES ? MAX_TAGGED_PAGES : *num_of_pages;
+      size_t tag_directory_size = sizeof(page_tag_t)*(number_of_tags);
+      page_tag_t *td_init = (page_tag_t *) malloc(tag_directory_size);
+      for(size_t i = 0; i < number_of_tags; i++) {
+        td_init[i].owner  = ENCLAVE_DEFAULT_ID;
+        td_init[i].reader = ENCLAVE_INVALID_ID;
+      }
+      //Round the size up to the nearest page
+      if(*num_of_pages > number_of_tags) {
+        fprintf(stderr, "spike.cc: ERROR tag directory size bigger than the memory.\n");
+        exit(-3);
+      }
+      if(tag_directory_size > TAGDIRECTORY_SIZE) {
+        fprintf(stderr, "spike.cc: ERROR tag direcotry does not fit in allocated memory.\n");
+        exit(-4);
+      }
+      memory_vector[3] = std::make_pair(reg_t(TAGDIRECTORY_BASE), new mem_t(tag_directory_size, tag_directory_size,  (char *) td_init));
     }
 #endif //MANAGEMENT_SHIM_INSTRUCTIONS
 #ifdef PRAESIDIO_DEBUG

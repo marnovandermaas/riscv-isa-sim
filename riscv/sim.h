@@ -16,8 +16,8 @@
 #include <memory>
 #include "debug.h"
 
-#define STACK_PAGE_OFFSET 4096
-#define MAX_TAGGED_PAGES 1048576
+#define STACK_PAGE_OFFSET (4096)
+#define MAX_TAGGED_PAGES  (1048576)
 
 class mmu_t;
 class remote_bitbang_t;
