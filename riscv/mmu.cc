@@ -6,7 +6,7 @@
 #include "processor.h"
 #include "debug.h"
 
-mmu_t::mmu_t(simif_t* sim, processor_t* proc, page_tag_t *tag_directory, size_t num_of_pages)
+mmu_t::mmu_t(simif_t* sim, processor_t* proc, struct page_tag_t *tag_directory, size_t num_of_pages)
  : sim(sim), proc(proc), tag_directory(tag_directory), num_of_pages(num_of_pages),
   check_triggers_fetch(false),
   check_triggers_load(false),
@@ -252,7 +252,7 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
 #endif
               throw trap_store_access_fault(addr);
             }
-            size_t entry_offset = (paddr - TAGDIRECTORY_BASE) / sizeof(page_tag_t);
+            size_t entry_offset = (paddr - TAGDIRECTORY_BASE) / sizeof(struct page_tag_t);
             if(tag_directory[entry_offset].owner != enclave_id) {
 #ifdef PRAESIDIO_DEBUG
               fprintf(stderr, "mmu.cc: trying to set reader in tag directory while not being the owner.\n");

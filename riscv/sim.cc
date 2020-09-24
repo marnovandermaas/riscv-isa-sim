@@ -103,7 +103,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t nenclaves, bool halted, reg_
     fprintf(stderr, "sim.cc: WARNING number of tagged pages beyond %d is not supported.\n", MAX_TAGGED_PAGES);
     num_of_pages = MAX_TAGGED_PAGES;
   }
-  tag_directory = (page_tag_t *) addr_to_mem(TAGDIRECTORY_BASE);
+  tag_directory = (struct page_tag_t *) addr_to_mem(TAGDIRECTORY_BASE);
   if(tag_directory == NULL) {
     fprintf(stderr, "sim.cc: ERROR tag directory cannot be found.\n");
     exit(-7);

@@ -22,7 +22,7 @@
 #define STATE state
 
 processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
-        enclave_id_t e_id, page_tag_t *tag_directory, size_t num_of_pages, bool halt_on_reset)
+        enclave_id_t e_id, struct page_tag_t *tag_directory, size_t num_of_pages, bool halt_on_reset)
   : debug(false), halt_request(false), sim(sim), ext(NULL), id(id), tag_directory(tag_directory), num_of_pages(num_of_pages),
   halt_on_reset(halt_on_reset), last_pc(1), executions(1)
 {

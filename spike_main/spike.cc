@@ -124,8 +124,8 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
       free(mb_init);
 
       size_t number_of_tags = *num_of_pages > MAX_TAGGED_PAGES ? MAX_TAGGED_PAGES : *num_of_pages;
-      size_t tag_directory_size = sizeof(page_tag_t)*(number_of_tags);
-      page_tag_t *td_init = (page_tag_t *) malloc(tag_directory_size);
+      size_t tag_directory_size = sizeof(struct page_tag_t)*(number_of_tags);
+      struct page_tag_t *td_init = (struct page_tag_t *) malloc(tag_directory_size);
       for(size_t i = 0; i < number_of_tags; i++) {
         td_init[i].owner  = ENCLAVE_DEFAULT_ID;
         td_init[i].reader = ENCLAVE_INVALID_ID;
