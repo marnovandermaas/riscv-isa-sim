@@ -556,26 +556,6 @@ void processor_t::set_csr(int which, reg_t val)
       sim->output_stats(val);
       break;
 #endif //BARE_METAL_OUTPUT_CSR
-#ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-    case CSR_ENCLAVEASSIGNREADER:
-      //least significant 16-bits are the enclave ID the rest is page number.
-      if(enclave_id == tag_directory[val].owner) {//TODO check if val is not out of bounds
-#ifdef PRAESIDIO_DEBUG
-        fprintf(stderr, "processor.cc: Adding reader %u to page %lu.\n", state.arg_enclave_id, val);
-#endif //PRAESIDIO_DEBUG
-        tag_directory[val].reader = state.arg_enclave_id;
-      }
-#ifdef PRAESIDIO_DEBUG
-      else {
-        fprintf(stderr, "proseccor.cc: WARNING failed to assign page %lu with reader %u, because owner is 0x%08x and you are 0x%08x.\n", val, state.arg_enclave_id, tag_directory[val].owner, enclave_id);
-      }
-#endif //PRAESIDIO_DEBUG
-      state.arg_enclave_id = ENCLAVE_INVALID_ID;
-      break;
-    case CSR_ENCLAVESETARGID:
-      state.arg_enclave_id = val;
-      break;
-#endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
 #ifdef MANAGEMENT_SHIM_INSTRUCTIONS
     case CSR_MANAGEENCLAVEID:
       //This instruction should only succeed if the pc is in within the management enclave.
@@ -649,16 +629,6 @@ reg_t processor_t::get_csr(int which)
     return 0;
   }
 #endif //BARE_METAL_OUTPUT_CSR
-
-#ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-  if (which == CSR_ENCLAVEASSIGNREADER)
-  {
-    return 0;
-  }
-  if (which == CSR_ENCLAVESETARGID) {
-    return state.arg_enclave_id; //TODO is this a security problem (cannot set this to 0 because then receivMessage breaks)
-  }
-#endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
 
 #ifdef MANAGEMENT_SHIM_INSTRUCTIONS
   if (which == CSR_MANAGEENCLAVEID)

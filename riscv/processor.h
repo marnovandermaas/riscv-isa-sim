@@ -126,10 +126,6 @@ struct state_t
   mcontrol_t mcontrol[num_triggers];
   reg_t tdata2[num_triggers];
 
-  //Register to contain the identifier for enclave page communication system type instructions
-#ifdef ENCLAVE_PAGE_COMMUNICATION_SYSTEM
-  enclave_id_t arg_enclave_id;
-#endif //ENCLAVE_PAGE_COMMUNICATION_SYSTEM
 #ifdef COVERT_CHANNEL_POC
   reg_t llc_miss_count;
 #endif //COVERT_CHANNEL_POC
