@@ -102,7 +102,12 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
         }
       }
       //TODO make these extra pages be local per processor.
-      size_t management_memory_size = MANAGEMENT_SHIM_SIZE + PGSIZE*num_enclaves; //We need to add extra pages for the stacks of the management code.
+      size_t management_memory_size = MANAGEMENT_SHIM_SIZE + PGSIZE*(5 + num_enclaves); //We need to add extra pages for the stacks and other data of the management code.
+      if(management_memory_size % PGSIZE) {
+        management_memory_size /= PGSIZE;
+        management_memory_size *= PGSIZE;
+        management_memory_size += 1;
+      }
       if(management_memory_size > MAX_MANAGMENT_SHIM_SIZE) {
         fprintf(stderr, "spike.cc: management shim is too large to fit in allocated memory.\n");
         exit(-101);
