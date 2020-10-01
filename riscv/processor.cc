@@ -571,24 +571,6 @@ void processor_t::set_csr(int which, reg_t val)
 #endif //PRAESIDIO_DEBUG
       }
       break;
-    case CSR_MANAGECHANGEPAGETAG:
-      //TODO fail if tag is not cached.
-      //This instruction takes as argument an address within the page that needs managing.
-      if(enclave_id == ENCLAVE_MANAGEMENT_ID) {
-        if(val & DRAM_BASE) {
-          int index = (val & (DRAM_BASE - 1)) / PGSIZE; //Assume DRAM_BASE is just one set bit.
-#ifdef PRAESIDIO_DEBUG
-          fprintf(stderr, "processor.cc: Changing page %d to tag: %u\n", index, state.arg_enclave_id);
-#endif //PRAESIDIO_DEBUG
-          tag_directory[index].owner = state.arg_enclave_id;
-        } else {
-          //TODO enable tagging for pages in boot ROM and management pages.
-#ifdef PRAESIDIO_DEBUG
-          fprintf(stderr, "processor.cc: WARNING: Currently tagging pages outside of DRAM is not supported 0x%lx\n", val);
-#endif //PRAESIDIO_DEBUG
-        }
-      }
-      break;
 #endif //MANAGEMENT_SHIM_INSTRUCTIONS
 #ifdef COVERT_CHANNEL_POC
     case CSR_LLCMISSCOUNT:
@@ -634,10 +616,6 @@ reg_t processor_t::get_csr(int which)
   if (which == CSR_MANAGEENCLAVEID)
   {
     return enclave_id;
-  }
-  if (which == CSR_MANAGECHANGEPAGETAG)
-  {
-    return 0;
   }
 #endif // MANAGEMENT_SHIM_INSTRUCTIONS
 
