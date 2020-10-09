@@ -101,8 +101,13 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
           break;
         }
       }
-      //TODO make these extra pages be local per processor.
-      size_t management_memory_size = MANAGEMENT_SHIM_SIZE + PGSIZE*(5 + num_enclaves); //We need to add extra pages for the stacks and other data of the management code.
+
+      size_t management_memory_size = MANAGEMENT_SHIM_SIZE;
+      //TODO think of a cleaner way of adding these additional pages so that the boot rom only contains the managment code
+      management_memory_size += PGSIZE*(num_enclaves); //We need to add extra pages for the memory management stack on each secure core.
+      management_memory_size += PGSIZE*(5); //This is for other data needed by the management shim (e.g. enclave data).
+      management_memory_size += 3*PGSIZE*(num_enclaves); //This is to store a 3-level page table for each of the secure cores. (It assumes that the management shim uses SV39).
+
       if(management_memory_size % PGSIZE) {
         management_memory_size /= PGSIZE;
         management_memory_size *= PGSIZE;
