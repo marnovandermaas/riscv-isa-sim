@@ -559,7 +559,7 @@ void processor_t::set_csr(int which, reg_t val)
 #ifdef MANAGEMENT_SHIM_INSTRUCTIONS
     case CSR_MANAGEENCLAVEID:
       //This instruction should only succeed if the pc is in within the management enclave.
-      if ((state.pc >= MANAGEMENT_SHIM_BASE) && (state.pc < MANAGEMENT_SHIM_BASE + MANAGEMENT_SHIM_SIZE))
+      if ((state.pc >= MANAGEMENT_SHIM_BASE) && (state.pc < MANAGEMENT_SHIM_BASE + MANAGEMENT_SHIM_CODE_SIZE))
       {
 #ifdef PRAESIDIO_DEBUG
         fprintf(stderr, "processor.cc: Enclave ID on core %u changed to 0x%lx\n", id, val);

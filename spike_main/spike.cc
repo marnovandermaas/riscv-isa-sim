@@ -83,10 +83,10 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
         fprintf(stderr, "spike.cc: ERROR could not open management file: %s.\n", management_path);
         exit(-1);
       }
-      size_t file_size = PGSIZE;
+      size_t file_size = MANAGEMENT_SHIM_CODE_SIZE;
       char *management_array = (char *) calloc(file_size, sizeof(char));
       size_t file_status;
-      for(size_t i = 0; i < PGSIZE; i++) {
+      for(size_t i = 0; i < MANAGEMENT_SHIM_CODE_SIZE; i++) {
         file_status = fread(&management_array[i], sizeof(char), 1, management_file);
         //fprintf(stderr, "%02x ", management_array[i] & 0xFF); //Need to &0xFF because otherwise C will sign extend values.
         if (file_status != 1) {
@@ -102,18 +102,13 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg, reg_t *n
         }
       }
 
-      size_t management_memory_size = MANAGEMENT_SHIM_SIZE;
-      //TODO think of a cleaner way of adding these additional pages so that the boot rom only contains the managment code
+      size_t management_memory_size = MANAGEMENT_SHIM_CODE_SIZE;
+      //TODO think of a cleaner way of adding these additional pages so that the boot rom only contains the management code
       management_memory_size += PGSIZE*(num_enclaves); //We need to add extra pages for the memory management stack on each secure core.
-      management_memory_size += PGSIZE*(5); //This is for other data needed by the management shim (e.g. enclave data).
+      management_memory_size += PGSIZE*(3); //This is for other data needed by the management shim (1 for page directory and 2 for enclave data)
       management_memory_size += 3*PGSIZE*(num_enclaves); //This is to store a 3-level page table for each of the secure cores. (It assumes that the management shim uses SV39).
 
-      if(management_memory_size % PGSIZE) {
-        management_memory_size /= PGSIZE;
-        management_memory_size *= PGSIZE;
-        management_memory_size += 1;
-      }
-      if(management_memory_size > MAX_MANAGMENT_SHIM_SIZE) {
+      if(management_memory_size > MAX_MANAGEMENT_SHIM_SIZE) {
         fprintf(stderr, "spike.cc: management shim is too large to fit in allocated memory.\n");
         exit(-101);
       }
