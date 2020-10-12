@@ -159,9 +159,6 @@
 #define DEFAULT_RSTVEC          0x00001000
 #define CLINT_BASE              0x02000000
 #define CLINT_SIZE              0x000c0000
-#ifdef MANAGEMENT_SHIM_INSTRUCTIONS
-#define MANAGEMENT_SHIM_SIZE 0x00004000
-#endif //MANAGEMENT_SHIM_INSTRUCTIONS
 #define EXT_IO_BASE             0x40000000
 #define DRAM_BASE               0x80000000
 
