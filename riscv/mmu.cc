@@ -217,14 +217,15 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
     }
     paddr += (sizeof(struct Message_t)) * (proc->id);
 #ifdef PRAESIDIO_DEBUG
-    fprintf(stderr, "mmu.cc: enclave 0x%x writing to mailbox address 0x%016lx\nmmu.cc: Content of mailboxes:", enclave_id, paddr);
-    for(unsigned int i = 0; i < 4*sizeof(struct Message_t)/4; i++) {
-      if(i%8 == 0) {
-        fprintf(stderr, "\nmmu.cc: ");
-      }
-      fprintf(stderr, "%08x ", ((int *) sim->addr_to_mem(MAILBOX_BASE))[i]);
-    }
-    fprintf(stderr, "\n");
+    fprintf(stderr, "mmu.cc: enclave 0x%x writing to mailbox address 0x%016lx\n", enclave_id, paddr);
+    // fprintf(stderr, "mmu.cc: Content of mailboxes:");
+    // for(unsigned int i = 0; i < 4*sizeof(struct Message_t)/4; i++) {
+    //   if(i%8 == 0) {
+    //     fprintf(stderr, "\nmmu.cc: ");
+    //   }
+    //   fprintf(stderr, "%08x ", ((int *) sim->addr_to_mem(MAILBOX_BASE))[i]);
+    // }
+    // fprintf(stderr, "\n");
 #endif
   }
 
@@ -353,25 +354,34 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode)
     if (PTE_TABLE(pte)) { // next level of page table
       base = ppn << PGSHIFT;
     } else if ((pte & PTE_U) ? s_mode && (type == FETCH || !sum) : !s_mode) {
+// #ifdef PRAESIDIO_DEBUG
+//       if(s_mode && type == FETCH) {
+//         fprintf(stderr, "mmu.cc: U ");
+//       }
+// #endif
       break;
     } else if (!(pte & PTE_V) || (!(pte & PTE_R) && (pte & PTE_W))) {
 // #ifdef PRAESIDIO_DEBUG
-//       fprintf(stderr, "mmu.cc: TRAP not valid or (write and not read)\n");
-//       fprintf(stderr, "walk(addr 0x%016lx, type %u, mode %lu)\n", addr, type, mode);
-//       fprintf(stderr, "mmu.cc: level %d, pte 0x%016lx ppn 0x%016lx, idx 0x%016lx\n", i, pte, ppn, idx);
-//       fprintf(stderr, "ptbase 0x%016lx content: \n", vm.ptbase);
-//       for(int i = 0; i < 1024; i++) {
-//         fprintf(stderr, "%016lx ", ((uint64_t*) (sim->addr_to_mem(vm.ptbase)))[i]);
+//       if(s_mode && type == FETCH) {
+//         fprintf(stderr, "mmu.cc: VRW ");
 //       }
-//       fprintf(stderr, "\n");
-//       exit(-1); //TODO remove
 // #endif
       break;
     } else if (type == FETCH ? !(pte & PTE_X) :
                type == LOAD ?  !(pte & PTE_R) && !(mxr && (pte & PTE_X)) :
                                !((pte & PTE_R) && (pte & PTE_W))) {
+// #ifdef PRAESIDIO_DEBUG
+//       if(s_mode && type == FETCH) {
+//         fprintf(stderr, "mmu.cc: XRW ");
+//       }
+// #endif
       break;
     } else if ((ppn & ((reg_t(1) << ptshift) - 1)) != 0) {
+// #ifdef PRAESIDIO_DEBUG
+//       if(s_mode && type == FETCH) {
+//         fprintf(stderr, "mmu.cc: ppn ");
+//       }
+// #endif
       break;
     } else {
       reg_t ad = PTE_A | ((type == STORE) * PTE_D);
@@ -381,7 +391,14 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode)
 #else
       // take exception if access or possibly dirty bit is not set.
       if ((pte & ad) != ad)
+      {
+// #ifdef PRAESIDIO_DEBUG
+//         if(s_mode) {
+//           fprintf(stderr, "mmu.cc: A ");
+//         }
+// #endif
         break;
+      }
 #endif
       // for superpage mappings, make a fake leaf PTE for the TLB's benefit.
       reg_t vpn = addr >> PGSHIFT;
@@ -392,7 +409,13 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode)
 
 fail:
   switch (type) {
-    case FETCH: throw trap_instruction_page_fault(addr);
+    case FETCH:
+// #ifdef PRAESIDIO_DEBUG
+//       if(s_mode) {
+//         fprintf(stderr, " instruction page fault addr 0x%016lx, mode %d, vm level %d, vm idxbits %lu, vm ptbase 0x%016lx, masked_msbs 0x%016lx, exited at iteration %d, ptshift %d, idx 0x%016lx, pte 0x%016lx, ppn 0x%016lx\n", addr, mode, vm.levels, vm.idxbits, vm.ptbase, masked_msbs, i, ptshift, idx, pte, ppn);
+//       }
+// #endif
+      throw trap_instruction_page_fault(addr);
     case LOAD: throw trap_load_page_fault(addr);
     case STORE: throw trap_store_page_fault(addr);
     default: abort();
