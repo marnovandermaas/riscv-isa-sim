@@ -562,7 +562,9 @@ void processor_t::set_csr(int which, reg_t val)
       if ((state.pc >= MANAGEMENT_SHIM_BASE) && (state.pc < MANAGEMENT_SHIM_BASE + MANAGEMENT_SHIM_CODE_SIZE))
       {
 #ifdef PRAESIDIO_DEBUG
-        fprintf(stderr, "processor.cc: Enclave ID on core %u changed to 0x%lx\n", id, val);
+        if(enclave_id != (enclave_id_t) val) {
+          fprintf(stderr, "processor.cc: Enclave ID on core %u changed from 0x%x to 0x%lx\n", id, enclave_id, val);
+        }
 #endif //PRAESIDIO_DEBUG
         enclave_id = val;
       } else {

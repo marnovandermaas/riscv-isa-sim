@@ -217,7 +217,7 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
     }
     paddr += (sizeof(struct Message_t)) * (proc->id);
 #ifdef PRAESIDIO_DEBUG
-    fprintf(stderr, "mmu.cc: enclave 0x%x writing to mailbox address 0x%016lx\n", enclave_id, paddr);
+    // fprintf(stderr, "mmu.cc: enclave 0x%x writing to mailbox address 0x%016lx\n", enclave_id, paddr);
     // fprintf(stderr, "mmu.cc: Content of mailboxes:");
     // for(unsigned int i = 0; i < 4*sizeof(struct Message_t)/4; i++) {
     //   if(i%8 == 0) {
@@ -268,7 +268,7 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, enclave
         struct Message_t *mailbox = (struct Message_t *) sim->addr_to_mem(MAILBOX_BASE + (sizeof(struct Message_t)) * (proc->id));
         mailbox->source = enclave_id; //Make sure the source is always the correct enclave identifier.
 #ifdef PRAESIDIO_DEBUG
-        fprintf(stderr, "mmu.cc: setting the source to 0x%x of mailbox 0x%016lx\n", enclave_id, paddr);
+        // fprintf(stderr, "mmu.cc: setting the source to 0x%x of mailbox 0x%016lx\n", enclave_id, paddr);
 #endif
       }
       if (tracer.interested_in_range(paddr, paddr + PGSIZE, STORE))
