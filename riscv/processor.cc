@@ -559,7 +559,7 @@ void processor_t::set_csr(int which, reg_t val)
 #ifdef MANAGEMENT_SHIM_INSTRUCTIONS
     case CSR_MANAGEENCLAVEID:
       //This instruction should only succeed if the pc is in within the management enclave.
-      if ((state.pc >= MANAGEMENT_SHIM_BASE) && (state.pc < MANAGEMENT_SHIM_BASE + MANAGEMENT_SHIM_CODE_SIZE))
+      if ((state.pc >= MANAGEMENT_SHIM_BASE) && (state.pc < MANAGEMENT_SHIM_BASE + MANAGEMENT_SHIM_CODE_SIZE) && state.prv == PRV_M)
       {
 #ifdef PRAESIDIO_DEBUG
         if(enclave_id != (enclave_id_t) val) {
@@ -569,7 +569,7 @@ void processor_t::set_csr(int which, reg_t val)
         enclave_id = val;
       } else {
 #ifdef PRAESIDIO_DEBUG
-        fprintf(stderr, "processor.cc: WARNING: pc was not in management enclave code 0x%lx", state.pc);
+        fprintf(stderr, "processor.cc: WARNING: pc was not in management enclave code 0x%016lx, or privilege was not M %lu\n", state.pc, state.prv);
 #endif //PRAESIDIO_DEBUG
       }
       break;
