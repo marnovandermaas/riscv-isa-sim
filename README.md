@@ -1,6 +1,14 @@
 RISC-V ISA Simulator
 ======================
 
+Author : Marno van der Maas
+
+This is a modified version of the Spike simulator for the Praesidio enclave framework. For more details on how to run this please have a look at the [praesidio-sdk repository](https://github.com/marnovandermaas/praesidio-sdk).
+
+
+Original README Content
+===
+
 Author  : Andrew Waterman, Yunsup Lee
 
 Date    : June 19, 2011
